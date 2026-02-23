@@ -107,13 +107,12 @@
 </nav>
 
 <main id="app-container">
-    <!-- O conteúdo será injetado aqui via JavaScript -->
-</main>
+    </main>
 
 <script>
 /**
  * ARQUITETURA DE DADOS
- * * Turma: { id, nome, periodo (matutino/vespertino/noturno) }
+ * Turma: { id, nome, periodo (matutino/vespertino/noturno/integral) }
  * Professor: { id, nome, disponibilidade[dia][slot] (boolean) }
  * Disciplina: { id, nome, turmaId, professorId, aulasSemanais, cor }
  * Grade: { turmaId: { dia: { slot: disciplinaId } } }
@@ -123,7 +122,7 @@
 // SERVIÇO DE DADOS (STORAGE)
 // ==========================================
 const Storage = {
-    key: 'sge_data_v1',
+    key: 'sge_data_v2', // Atualizado para nova versão
     
     get() {
         const data = localStorage.getItem(this.key);
@@ -141,7 +140,7 @@ const Storage = {
             professores: [],
             disciplinas: [],
             config: {
-                slotsPorDia: 5,
+                slotsPorDia: 9, // Aumentado para 9 para suportar o Integral
                 diasLetivos: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']
             },
             gradeGerada: null
@@ -182,7 +181,6 @@ class SistemaGestao {
 
     deleteProfessor(id) {
         this.data.professores = this.data.professores.filter(p => p.id !== id);
-        // Remove professor das disciplinas mas mantem a disciplina
         this.data.disciplinas.forEach(d => {
             if(d.professorId === id) d.professorId = null;
         });
@@ -214,20 +212,18 @@ class SistemaGestao {
 
     // --- Algoritmo de Distribuição ---
     gerarGrade() {
-        // Reiniciar grade
-        const grade = {}; // { turmaId: [ [slot0, slot1...], [slot0... dia 2] ] }
+        const grade = {}; 
         const conflitos = [];
         
-        // Inicializar estrutura vazia
+        // 1. Inicializar estrutura com tamanhos dinâmicos (5 ou 9 aulas)
         this.data.turmas.forEach(t => {
-            grade[t.id] = Array(5).fill(null).map(() => Array(this.data.config.slotsPorDia).fill(null));
+            const numSlots = (t.periodo === 'Integral') ? 9 : 5;
+            grade[t.id] = Array(5).fill(null).map(() => Array(numSlots).fill(null));
         });
 
-        // Controle de onde o professor está alocado: professorOcupado[dia][slot] = turmaId
         const professorOcupado = {}; 
 
-        // 1. Preparar fila de aulas
-        // Estratégia: Ordenar disciplinas por dificuldade (Professores com menos horários livres primeiro)
+        // 2. Preparar fila de aulas ordenando por dificuldade de alocação
         let filaAulas = [];
         
         this.data.disciplinas.forEach(disc => {
@@ -235,50 +231,41 @@ class SistemaGestao {
             const peso = prof ? this.countAvailability(prof) : 100;
             
             for(let i=0; i < disc.aulasSemanais; i++) {
-                filaAulas.push({
-                    disciplina: disc,
-                    professor: prof,
-                    peso: peso // Quanto menor, mais difícil alocar
-                });
+                filaAulas.push({ disciplina: disc, professor: prof, peso: peso });
             }
         });
 
-        // Ordenar: Mais restritos primeiro
         filaAulas.sort((a, b) => a.peso - b.peso);
 
-        // 2. Alocar
+        // 3. Alocar
         filaAulas.forEach(item => {
             const { disciplina, professor } = item;
             let alocado = false;
+            
+            const turma = this.data.turmas.find(t => t.id === disciplina.turmaId);
+            if(!turma) return;
+            
+            const maxSlotsTurma = turma.periodo === 'Integral' ? 9 : 5;
+            const maxAulasDia = turma.periodo === 'Integral' ? 3 : 2; // Soft constraint ajustada
 
-            // Tenta encontrar um slot vago
-            // Iteração randomizada de dias para distribuir carga
             const dias = [0,1,2,3,4].sort(() => Math.random() - 0.5);
             
             for (let dia of dias) {
                 if (alocado) break;
 
-                // Verificar regra de máximo de aulas por dia (ex: max 3 da mesma matéria)
                 const aulasNoDia = grade[disciplina.turmaId][dia].filter(dId => dId === disciplina.id).length;
-                if (aulasNoDia >= 2) continue; // Soft constraint: evitar mais de 2 aulas seguidas
+                if (aulasNoDia >= maxAulasDia) continue; 
 
-                for (let slot = 0; slot < this.data.config.slotsPorDia; slot++) {
-                    // Verificações Rígidas
-                    
-                    // 1. Slot na turma está livre?
+                for (let slot = 0; slot < maxSlotsTurma; slot++) {
                     if (grade[disciplina.turmaId][dia][slot] !== null) continue;
 
-                    // 2. Se tem professor, ele está livre na disponibilidade cadastrada?
                     if (professor) {
-                        // disponibilidade[dia][slot] === true
                         if (!professor.disponibilidade[dia][slot]) continue;
-
-                        // 3. Professor já está dando aula em outra turma neste horário?
                         const chaveOcupacao = `${professor.id}-${dia}-${slot}`;
                         if (professorOcupado[chaveOcupacao]) continue;
                     }
 
-                    // SUCESSO: Alocar
+                    // Alocar com sucesso
                     grade[disciplina.turmaId][dia][slot] = disciplina.id;
                     if (professor) {
                         professorOcupado[`${professor.id}-${dia}-${slot}`] = disciplina.turmaId;
@@ -289,7 +276,7 @@ class SistemaGestao {
             }
 
             if (!alocado) {
-                conflitos.push(`Não foi possível alocar uma aula de ${disciplina.nome} para a turma ${this.getTurmaName(disciplina.turmaId)}.`);
+                conflitos.push(`Não foi possível alocar uma aula de ${disciplina.nome} para a turma ${turma.nome}.`);
             }
         });
 
@@ -302,11 +289,6 @@ class SistemaGestao {
         let count = 0;
         prof.disponibilidade.forEach(dia => dia.forEach(slot => { if(slot) count++; }));
         return count;
-    }
-
-    getTurmaName(id) {
-        const t = this.data.turmas.find(x => x.id === id);
-        return t ? t.nome : 'Desconhecida';
     }
 }
 
@@ -347,7 +329,6 @@ const App = {
         }
     },
 
-    // --- RENDER TURMAS ---
     renderTurmas(container) {
         const html = `
             <div class="card">
@@ -360,9 +341,10 @@ const App = {
                     <div class="form-group" style="flex:1">
                         <label>Período</label>
                         <select id="turma-periodo">
-                            <option value="Matutino">Matutino</option>
-                            <option value="Vespertino">Vespertino</option>
-                            <option value="Noturno">Noturno</option>
+                            <option value="Matutino">Matutino (5 aulas)</option>
+                            <option value="Vespertino">Vespertino (5 aulas)</option>
+                            <option value="Noturno">Noturno (5 aulas)</option>
+                            <option value="Integral" style="font-weight:bold; color:var(--primary)">Integral (9 aulas)</option>
                         </select>
                     </div>
                     <button class="btn btn-primary form-group" onclick="Handlers.addTurma()">Adicionar</button>
@@ -391,14 +373,12 @@ const App = {
         container.innerHTML = html;
     },
 
-    // --- RENDER PROFESSORES ---
     renderProfessores(container) {
-        const slots = this.sys.data.config.slotsPorDia;
+        const slots = this.sys.data.config.slotsPorDia; // Agora será 9
         const dias = this.sys.data.config.diasLetivos;
         
-        // Gerar HTML da matriz de disponibilidade
         let matrixHtml = '<div class="availability-matrix">';
-        matrixHtml += '<div class="av-cell header"></div>'; // Canto vazio
+        matrixHtml += '<div class="av-cell header"></div>'; 
         dias.forEach(d => matrixHtml += `<div class="av-cell header">${d.substr(0,3)}</div>`);
         
         for(let s=0; s<slots; s++) {
@@ -417,7 +397,7 @@ const App = {
                     <input type="text" id="prof-nome">
                 </div>
                 <div class="form-group">
-                    <label>Disponibilidade Semanal (Clique para desmarcar horários indisponíveis)</label>
+                    <label>Disponibilidade Semanal (O sistema suporta até 9 aulas para atender o Integral)</label>
                     <div id="prof-avail-wrapper">${matrixHtml}</div>
                 </div>
                 <button class="btn btn-primary" onclick="Handlers.addProfessor()">Salvar Professor</button>
@@ -446,7 +426,6 @@ const App = {
         container.innerHTML = html;
     },
 
-    // --- RENDER DISCIPLINAS ---
     renderDisciplinas(container) {
         if (this.sys.data.turmas.length === 0) {
             container.innerHTML = `<div class="alert alert-error">Cadastre turmas antes de adicionar disciplinas.</div>`;
@@ -458,7 +437,7 @@ const App = {
                 <h2>Matriz Curricular</h2>
                 <div class="flex-row" style="flex-wrap: wrap;">
                     <div class="form-group" style="flex: 2; min-width: 200px;">
-                        <label>Nome da Disciplina (Ex: Matemática)</label>
+                        <label>Disciplina</label>
                         <input type="text" id="disc-nome">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 150px;">
@@ -476,7 +455,7 @@ const App = {
                     </div>
                     <div class="form-group" style="flex: 0.5; min-width: 100px;">
                         <label>Aulas/Sem</label>
-                        <input type="number" id="disc-aulas" value="2" min="1" max="10">
+                        <input type="number" id="disc-aulas" value="2" min="1" max="15">
                     </div>
                     <div class="form-group">
                         <button class="btn btn-primary" onclick="Handlers.addDisciplina()">Adicionar</button>
@@ -491,12 +470,13 @@ const App = {
                     if (discs.length === 0) return '';
                     
                     const totalAulas = discs.reduce((acc, curr) => acc + curr.aulasSemanais, 0);
+                    const maxAulas = t.periodo === 'Integral' ? 45 : 25; // Validação flexível
                     
                     return `
                     <div style="margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
                         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
                             <h4>${t.nome} <small style="color: var(--secondary)">(${t.periodo})</small></h4>
-                            <span style="font-size: 0.85em; background: ${totalAulas > 25 ? '#fee2e2' : '#e0f2fe'}; padding: 2px 8px; border-radius: 4px;">Total Aulas: ${totalAulas}/25</span>
+                            <span style="font-size: 0.85em; background: ${totalAulas > maxAulas ? '#fee2e2' : '#e0f2fe'}; padding: 2px 8px; border-radius: 4px;">Total Aulas: ${totalAulas}/${maxAulas}</span>
                         </div>
                         <table>
                             <thead><tr><th>Disciplina</th><th>Professor</th><th>Carga</th><th>Ações</th></tr></thead>
@@ -521,13 +501,12 @@ const App = {
         container.innerHTML = html;
     },
 
-    // --- RENDER GERADOR/GRADE ---
     renderGerador(container) {
         if(!this.sys.data.gradeGerada) {
             container.innerHTML = `
                 <div class="card" style="text-align: center; padding: 3rem;">
                     <h2>Pronto para gerar?</h2>
-                    <p style="margin-bottom: 1.5rem; color: var(--secondary);">O algoritmo irá distribuir as disciplinas respeitando a disponibilidade dos professores.</p>
+                    <p style="margin-bottom: 1.5rem; color: var(--secondary);">O algoritmo irá distribuir as disciplinas respeitando a disponibilidade dos professores e os tamanhos das turmas.</p>
                     <button class="btn btn-primary" onclick="Handlers.gerarGrade()" style="font-size: 1.2rem; padding: 1rem 2rem;">🚀 Gerar Grade Automática</button>
                 </div>
             `;
@@ -535,19 +514,22 @@ const App = {
         }
 
         let html = `
-            <div class="no-print" style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
-                <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-                <button class="btn btn-success" onclick="Handlers.gerarGrade()">🔄 Re-gerar</button>
+            <div class="no-print" style="margin-bottom: 1rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir PDF</button>
+                    <button class="btn btn-success" onclick="Handlers.exportarCSV()" style="background-color: #059669;">📊 Exportar CSV (Excel)</button>
+                </div>
+                <button class="btn btn-danger" onclick="Handlers.gerarGrade()">🔄 Re-gerar Nova Grade</button>
             </div>
             
             <div id="conflict-panel" class="no-print"></div>
         `;
 
-        // Renderizar uma grade por turma
         this.sys.data.turmas.forEach(turma => {
             const gradeTurma = this.sys.data.gradeGerada[turma.id];
             if (!gradeTurma) return;
 
+            // O tamanho dinâmico (5 ou 9) é lido aqui: gradeTurma[0].length
             html += `
                 <div class="card" style="break-inside: avoid;">
                     <h2>Grade: ${turma.nome} <small>(${turma.periodo})</small></h2>
@@ -559,7 +541,7 @@ const App = {
                         <div class="grid-header">Quinta</div>
                         <div class="grid-header">Sexta</div>
 
-                        ${gradeTurma[0].map((_, slotIndex) => { // Transpor para linhas serem slots
+                        ${Array.from({length: gradeTurma[0].length}).map((_, slotIndex) => {
                             let rowHtml = `<div class="grid-time">${slotIndex + 1}º Aula</div>`;
                             
                             for (let dia = 0; dia < 5; dia++) {
@@ -580,7 +562,6 @@ const App = {
                                         `;
                                     }
                                 }
-
                                 rowHtml += `<div class="grid-cell" style="${cellStyle}">${cellContent}</div>`;
                             }
                             return rowHtml;
@@ -617,15 +598,12 @@ const Handlers = {
         const nome = document.getElementById('prof-nome').value;
         if(!nome) return alert('Nome obrigatório');
 
-        // Ler matriz
-        const slots = 5; // slots por dia
+        const slots = 9; // Lendo 9 possíveis slots
         const dias = 5;
         const matrix = [];
         
-        // Inicializar matriz vazia
         for(let d=0; d<dias; d++) matrix[d] = [];
 
-        // Preencher baseado no DOM
         document.querySelectorAll('#prof-avail-wrapper .av-cell:not(.header)').forEach(cell => {
             const d = parseInt(cell.dataset.dia);
             const s = parseInt(cell.dataset.slot);
@@ -676,6 +654,58 @@ const Handlers = {
         } else {
             painel.innerHTML = `<div class="alert alert-info">Grade gerada com sucesso sem conflitos!</div>`;
         }
+    },
+
+    // Nova função para Exportar CSV
+    exportarCSV() {
+        const gradeGerada = App.sys.data.gradeGerada;
+        if (!gradeGerada) {
+            alert("Por favor, gere a grade antes de exportar.");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Turma;Dia da Semana;Aula;Disciplina;Professor\n"; // Cabeçalho
+
+        const nomesDias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
+
+        // Navegar pelas turmas
+        App.sys.data.turmas.forEach(turma => {
+            const grade = gradeGerada[turma.id];
+            if (!grade) return;
+
+            // Navegar pelos dias
+            for (let dia = 0; dia < 5; dia++) {
+                // Navegar pelas aulas (slots de 5 ou 9)
+                for (let slot = 0; slot < grade[dia].length; slot++) {
+                    const discId = grade[dia][slot];
+                    let disciplinaNome = "Horário Livre";
+                    let professorNome = "-";
+
+                    if (discId) {
+                        const disc = App.sys.data.disciplinas.find(d => d.id === discId);
+                        if (disc) {
+                            disciplinaNome = disc.nome;
+                            const prof = App.sys.data.professores.find(p => p.id === disc.professorId);
+                            if (prof) professorNome = prof.nome;
+                        }
+                    }
+
+                    // Montar a linha (Turma; Dia; Aula; Disciplina; Prof)
+                    csvContent += `${turma.nome};${nomesDias[dia]};${slot + 1}º Aula;${disciplinaNome};${professorNome}\n`;
+                }
+            }
+        });
+
+        // Configurar o Download
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Grade_Escolar_Exportada.csv");
+        document.body.appendChild(link);
+        
+        link.click();
+        document.body.removeChild(link);
     }
 };
 
