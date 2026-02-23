@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGE - Sistema de Gestão Escolar</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        body { background-color: var(--background); color: var(--text); line-height: 1.5; padding-bottom: 50px; }
+
+        /* Layout Principal */
+        header { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.5rem; font-weight: 600; }
+        
+        nav { background: var(--surface); padding: 0.5rem 2rem; border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
+        nav button {
+            background: none; border: none; padding: 0.75rem 1.5rem; cursor: pointer; font-weight: 500; color: var(--secondary); transition: all 0.2s; border-radius: 6px;
+        }
+        nav button:hover { background-color: var(--background); color: var(--primary); }
+        nav button.active { background-color: var(--primary); color: white; }
+
+        main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+
+        /* Componentes UI */
+        .card { background: var(--surface); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
+        .card h2 { margin-bottom: 1rem; color: var(--primary-dark); font-size: 1.25rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+
+        .btn { padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; transition: 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-size: 1rem; }
+        input:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        /* Tabelas e Grades */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: var(--background); font-weight: 600; }
+        tr:hover { background-color: #f8fafc; }
+
+        /* Grade Visual */
+        .schedule-grid { display: grid; grid-template-columns: 80px repeat(5, 1fr); gap: 1px; background-color: var(--border); border: 1px solid var(--border); margin-top: 1rem; }
+        .grid-header, .grid-cell, .grid-time { background-color: var(--surface); padding: 0.5rem; min-height: 80px; display: flex; flex-direction: column; justify-content: center; font-size: 0.85rem; }
+        .grid-header { font-weight: bold; text-align: center; background-color: #e2e8f0; min-height: 40px; }
+        .grid-time { font-weight: bold; align-items: center; background-color: #f1f5f9; }
+        .grid-cell { align-items: flex-start; position: relative; transition: background 0.2s; }
+        .grid-cell:hover { background-color: #f8fafc; }
+        .cell-content { width: 100%; }
+        .subject-tag { font-weight: bold; color: var(--primary); }
+        .teacher-tag { font-size: 0.75rem; color: var(--secondary); }
+
+        /* Availability Grid (Checkbox Matrix) */
+        .availability-matrix { display: grid; grid-template-columns: 80px repeat(5, 1fr); gap: 4px; margin-top: 10px; }
+        .av-cell { text-align: center; padding: 5px; background: #eee; cursor: pointer; user-select: none; border-radius: 4px; }
+        .av-cell.selected { background: var(--success); color: white; }
+        .av-cell.header { background: transparent; font-weight: bold; cursor: default; }
+
+        /* Utilitários */
+        .hidden { display: none !important; }
+        .flex-row { display: flex; gap: 1rem; align-items: flex-end; }
+        .alert { padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border-left: 4px solid; }
+        .alert-error { background: #fee2e2; border-color: var(--danger); color: #991b1b; }
+        .alert-info { background: #e0f2fe; border-color: var(--primary); color: #075985; }
+
+        /* Impressão */
+        @media print {
+            header, nav, .no-print { display: none; }
+            body { background: white; padding: 0; }
+            .card { box-shadow: none; padding: 0; margin: 0; }
+            .schedule-grid { border: 1px solid #000; gap: 0; page-break-inside: avoid; }
+            .grid-header, .grid-cell, .grid-time { border: 1px solid #000; }
+            h2 { page-break-before: always; }
+            h2:first-of-type { page-break-before: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>SGE - Sistema de Grade Escolar</h1>
+    <button onclick="App.resetData()" class="btn btn-danger no-print" style="font-size: 0.8rem;">Limpar Tudo</button>
+</header>
+
+<nav class="no-print">
+    <button onclick="App.navigate('turmas')" id="nav-turmas" class="active">Turmas & Períodos</button>
+    <button onclick="App.navigate('professores')" id="nav-professores">Professores</button>
+    <button onclick="App.navigate('disciplinas')" id="nav-disciplinas">Disciplinas (Matriz)</button>
+    <button onclick="App.navigate('gerar')" id="nav-gerar">Gerar Grade</button>
+</nav>
+
+<main id="app-container">
+    <!-- O conteúdo será injetado aqui via JavaScript -->
+</main>
+
+<script>
+/**
+ * ARQUITETURA DE DADOS
+ * * Turma: { id, nome, periodo (matutino/vespertino/noturno) }
+ * Professor: { id, nome, disponibilidade[dia][slot] (boolean) }
+ * Disciplina: { id, nome, turmaId, professorId, aulasSemanais, cor }
+ * Grade: { turmaId: { dia: { slot: disciplinaId } } }
+ */
+
+// ==========================================
+// SERVIÇO DE DADOS (STORAGE)
+// ==========================================
+const Storage = {
+    key: 'sge_data_v1',
+    
+    get() {
+        const data = localStorage.getItem(this.key);
+        if (!data) return this.initialState();
+        return JSON.parse(data);
+    },
+
+    save(data) {
+        localStorage.setItem(this.key, JSON.stringify(data));
+    },
+
+    initialState() {
+        return {
+            turmas: [],
+            professores: [],
+            disciplinas: [],
+            config: {
+                slotsPorDia: 5,
+                diasLetivos: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']
+            },
+            gradeGerada: null
+        };
+    }
+};
+
+// ==========================================
+// CORE & LOGIC
+// ==========================================
+class SistemaGestao {
+    constructor() {
+        this.data = Storage.get();
+    }
+
+    save() {
+        Storage.save(this.data);
+        App.render();
+    }
+
+    // --- Turmas ---
+    addTurma(nome, periodo) {
+        this.data.turmas.push({ id: Date.now().toString(), nome, periodo });
+        this.save();
+    }
+
+    deleteTurma(id) {
+        this.data.turmas = this.data.turmas.filter(t => t.id !== id);
+        this.data.disciplinas = this.data.disciplinas.filter(d => d.turmaId !== id);
+        this.save();
+    }
+
+    // --- Professores ---
+    addProfessor(nome, disponibilidade) {
+        this.data.professores.push({ id: Date.now().toString(), nome, disponibilidade });
+        this.save();
+    }
+
+    deleteProfessor(id) {
+        this.data.professores = this.data.professores.filter(p => p.id !== id);
+        // Remove professor das disciplinas mas mantem a disciplina
+        this.data.disciplinas.forEach(d => {
+            if(d.professorId === id) d.professorId = null;
+        });
+        this.save();
+    }
+
+    // --- Disciplinas ---
+    addDisciplina(nome, turmaId, professorId, aulasSemanais) {
+        this.data.disciplinas.push({
+            id: Date.now().toString() + Math.random().toString(16).slice(2),
+            nome,
+            turmaId,
+            professorId,
+            aulasSemanais: parseInt(aulasSemanais),
+            cor: this.getRandomColor()
+        });
+        this.save();
+    }
+
+    deleteDisciplina(id) {
+        this.data.disciplinas = this.data.disciplinas.filter(d => d.id !== id);
+        this.save();
+    }
+
+    getRandomColor() {
+        const colors = ['#eff6ff', '#f0fdf4', '#fefce8', '#fef2f2', '#f5f3ff', '#fff7ed'];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // --- Algoritmo de Distribuição ---
+    gerarGrade() {
+        // Reiniciar grade
+        const grade = {}; // { turmaId: [ [slot0, slot1...], [slot0... dia 2] ] }
+        const conflitos = [];
+        
+        // Inicializar estrutura vazia
+        this.data.turmas.forEach(t => {
+            grade[t.id] = Array(5).fill(null).map(() => Array(this.data.config.slotsPorDia).fill(null));
+        });
+
+        // Controle de onde o professor está alocado: professorOcupado[dia][slot] = turmaId
+        const professorOcupado = {}; 
+
+        // 1. Preparar fila de aulas
+        // Estratégia: Ordenar disciplinas por dificuldade (Professores com menos horários livres primeiro)
+        let filaAulas = [];
+        
+        this.data.disciplinas.forEach(disc => {
+            const prof = this.data.professores.find(p => p.id === disc.professorId);
+            const peso = prof ? this.countAvailability(prof) : 100;
+            
+            for(let i=0; i < disc.aulasSemanais; i++) {
+                filaAulas.push({
+                    disciplina: disc,
+                    professor: prof,
+                    peso: peso // Quanto menor, mais difícil alocar
+                });
+            }
+        });
+
+        // Ordenar: Mais restritos primeiro
+        filaAulas.sort((a, b) => a.peso - b.peso);
+
+        // 2. Alocar
+        filaAulas.forEach(item => {
+            const { disciplina, professor } = item;
+            let alocado = false;
+
+            // Tenta encontrar um slot vago
+            // Iteração randomizada de dias para distribuir carga
+            const dias = [0,1,2,3,4].sort(() => Math.random() - 0.5);
+            
+            for (let dia of dias) {
+                if (alocado) break;
+
+                // Verificar regra de máximo de aulas por dia (ex: max 3 da mesma matéria)
+                const aulasNoDia = grade[disciplina.turmaId][dia].filter(dId => dId === disciplina.id).length;
+                if (aulasNoDia >= 2) continue; // Soft constraint: evitar mais de 2 aulas seguidas
+
+                for (let slot = 0; slot < this.data.config.slotsPorDia; slot++) {
+                    // Verificações Rígidas
+                    
+                    // 1. Slot na turma está livre?
+                    if (grade[disciplina.turmaId][dia][slot] !== null) continue;
+
+                    // 2. Se tem professor, ele está livre na disponibilidade cadastrada?
+                    if (professor) {
+                        // disponibilidade[dia][slot] === true
+                        if (!professor.disponibilidade[dia][slot]) continue;
+
+                        // 3. Professor já está dando aula em outra turma neste horário?
+                        const chaveOcupacao = `${professor.id}-${dia}-${slot}`;
+                        if (professorOcupado[chaveOcupacao]) continue;
+                    }
+
+                    // SUCESSO: Alocar
+                    grade[disciplina.turmaId][dia][slot] = disciplina.id;
+                    if (professor) {
+                        professorOcupado[`${professor.id}-${dia}-${slot}`] = disciplina.turmaId;
+                    }
+                    alocado = true;
+                    break;
+                }
+            }
+
+            if (!alocado) {
+                conflitos.push(`Não foi possível alocar uma aula de ${disciplina.nome} para a turma ${this.getTurmaName(disciplina.turmaId)}.`);
+            }
+        });
+
+        this.data.gradeGerada = grade;
+        this.save();
+        return conflitos;
+    }
+
+    countAvailability(prof) {
+        let count = 0;
+        prof.disponibilidade.forEach(dia => dia.forEach(slot => { if(slot) count++; }));
+        return count;
+    }
+
+    getTurmaName(id) {
+        const t = this.data.turmas.find(x => x.id === id);
+        return t ? t.nome : 'Desconhecida';
+    }
+}
+
+// ==========================================
+// UI CONTROLLER
+// ==========================================
+const App = {
+    sys: new SistemaGestao(),
+    currentTab: 'turmas',
+
+    init() {
+        this.render();
+    },
+
+    navigate(tab) {
+        this.currentTab = tab;
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(`nav-${tab}`).classList.add('active');
+        this.render();
+    },
+
+    resetData() {
+        if(confirm('Tem certeza? Todos os dados serão apagados.')) {
+            localStorage.removeItem(Storage.key);
+            location.reload();
+        }
+    },
+
+    render() {
+        const container = document.getElementById('app-container');
+        container.innerHTML = '';
+
+        switch(this.currentTab) {
+            case 'turmas': this.renderTurmas(container); break;
+            case 'professores': this.renderProfessores(container); break;
+            case 'disciplinas': this.renderDisciplinas(container); break;
+            case 'gerar': this.renderGerador(container); break;
+        }
+    },
+
+    // --- RENDER TURMAS ---
+    renderTurmas(container) {
+        const html = `
+            <div class="card">
+                <h2>Gerenciar Turmas</h2>
+                <div class="flex-row">
+                    <div class="form-group" style="flex:1">
+                        <label>Nome da Turma (Ex: 1º A)</label>
+                        <input type="text" id="turma-nome">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Período</label>
+                        <select id="turma-periodo">
+                            <option value="Matutino">Matutino</option>
+                            <option value="Vespertino">Vespertino</option>
+                            <option value="Noturno">Noturno</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary form-group" onclick="Handlers.addTurma()">Adicionar</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Turmas Cadastradas</h3>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Período</th><th>Ações</th></tr></thead>
+                        <tbody>
+                            ${this.sys.data.turmas.map(t => `
+                                <tr>
+                                    <td>${t.nome}</td>
+                                    <td><span style="padding: 2px 8px; border-radius: 10px; background: #e2e8f0; font-size: 0.8em;">${t.periodo}</span></td>
+                                    <td><button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.8em;" onclick="Handlers.delTurma('${t.id}')">Excluir</button></td>
+                                </tr>
+                            `).join('')}
+                            ${this.sys.data.turmas.length === 0 ? '<tr><td colspan="3">Nenhuma turma cadastrada.</td></tr>' : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    },
+
+    // --- RENDER PROFESSORES ---
+    renderProfessores(container) {
+        const slots = this.sys.data.config.slotsPorDia;
+        const dias = this.sys.data.config.diasLetivos;
+        
+        // Gerar HTML da matriz de disponibilidade
+        let matrixHtml = '<div class="availability-matrix">';
+        matrixHtml += '<div class="av-cell header"></div>'; // Canto vazio
+        dias.forEach(d => matrixHtml += `<div class="av-cell header">${d.substr(0,3)}</div>`);
+        
+        for(let s=0; s<slots; s++) {
+            matrixHtml += `<div class="av-cell header">${s+1}º</div>`;
+            for(let d=0; d<5; d++) {
+                matrixHtml += `<div class="av-cell selected" onclick="this.classList.toggle('selected')" data-dia="${d}" data-slot="${s}">Livre</div>`;
+            }
+        }
+        matrixHtml += '</div>';
+
+        const html = `
+            <div class="card">
+                <h2>Gerenciar Professores</h2>
+                <div class="form-group">
+                    <label>Nome do Professor</label>
+                    <input type="text" id="prof-nome">
+                </div>
+                <div class="form-group">
+                    <label>Disponibilidade Semanal (Clique para desmarcar horários indisponíveis)</label>
+                    <div id="prof-avail-wrapper">${matrixHtml}</div>
+                </div>
+                <button class="btn btn-primary" onclick="Handlers.addProfessor()">Salvar Professor</button>
+            </div>
+
+            <div class="card">
+                <h3>Corpo Docente</h3>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Disponibilidade</th><th>Ações</th></tr></thead>
+                        <tbody>
+                            ${this.sys.data.professores.map(p => {
+                                const totalSlots = p.disponibilidade.flat().filter(Boolean).length;
+                                return `
+                                <tr>
+                                    <td>${p.nome}</td>
+                                    <td>${totalSlots} slots livres</td>
+                                    <td><button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.8em;" onclick="Handlers.delProfessor('${p.id}')">Excluir</button></td>
+                                </tr>
+                            `}).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    },
+
+    // --- RENDER DISCIPLINAS ---
+    renderDisciplinas(container) {
+        if (this.sys.data.turmas.length === 0) {
+            container.innerHTML = `<div class="alert alert-error">Cadastre turmas antes de adicionar disciplinas.</div>`;
+            return;
+        }
+
+        const html = `
+            <div class="card">
+                <h2>Matriz Curricular</h2>
+                <div class="flex-row" style="flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 2; min-width: 200px;">
+                        <label>Nome da Disciplina (Ex: Matemática)</label>
+                        <input type="text" id="disc-nome">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label>Turma</label>
+                        <select id="disc-turma">
+                            ${this.sys.data.turmas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label>Professor</label>
+                        <select id="disc-prof">
+                            <option value="">-- A definir --</option>
+                            ${this.sys.data.professores.map(p => `<option value="${p.id}">${p.nome}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 0.5; min-width: 100px;">
+                        <label>Aulas/Sem</label>
+                        <input type="number" id="disc-aulas" value="2" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="Handlers.addDisciplina()">Adicionar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Disciplinas por Turma</h3>
+                ${this.sys.data.turmas.map(t => {
+                    const discs = this.sys.data.disciplinas.filter(d => d.turmaId === t.id);
+                    if (discs.length === 0) return '';
+                    
+                    const totalAulas = discs.reduce((acc, curr) => acc + curr.aulasSemanais, 0);
+                    
+                    return `
+                    <div style="margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                            <h4>${t.nome} <small style="color: var(--secondary)">(${t.periodo})</small></h4>
+                            <span style="font-size: 0.85em; background: ${totalAulas > 25 ? '#fee2e2' : '#e0f2fe'}; padding: 2px 8px; border-radius: 4px;">Total Aulas: ${totalAulas}/25</span>
+                        </div>
+                        <table>
+                            <thead><tr><th>Disciplina</th><th>Professor</th><th>Carga</th><th>Ações</th></tr></thead>
+                            <tbody>
+                                ${discs.map(d => {
+                                    const profName = d.professorId ? this.sys.data.professores.find(p => p.id === d.professorId)?.nome : '<span style="color:red">Sem prof.</span>';
+                                    return `
+                                    <tr>
+                                        <td>${d.nome}</td>
+                                        <td>${profName}</td>
+                                        <td>${d.aulasSemanais}</td>
+                                        <td><button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.8em;" onclick="Handlers.delDisciplina('${d.id}')">X</button></td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        container.innerHTML = html;
+    },
+
+    // --- RENDER GERADOR/GRADE ---
+    renderGerador(container) {
+        if(!this.sys.data.gradeGerada) {
+            container.innerHTML = `
+                <div class="card" style="text-align: center; padding: 3rem;">
+                    <h2>Pronto para gerar?</h2>
+                    <p style="margin-bottom: 1.5rem; color: var(--secondary);">O algoritmo irá distribuir as disciplinas respeitando a disponibilidade dos professores.</p>
+                    <button class="btn btn-primary" onclick="Handlers.gerarGrade()" style="font-size: 1.2rem; padding: 1rem 2rem;">🚀 Gerar Grade Automática</button>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <div class="no-print" style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+                <button class="btn btn-success" onclick="Handlers.gerarGrade()">🔄 Re-gerar</button>
+            </div>
+            
+            <div id="conflict-panel" class="no-print"></div>
+        `;
+
+        // Renderizar uma grade por turma
+        this.sys.data.turmas.forEach(turma => {
+            const gradeTurma = this.sys.data.gradeGerada[turma.id];
+            if (!gradeTurma) return;
+
+            html += `
+                <div class="card" style="break-inside: avoid;">
+                    <h2>Grade: ${turma.nome} <small>(${turma.periodo})</small></h2>
+                    <div class="schedule-grid">
+                        <div class="grid-header">Horário</div>
+                        <div class="grid-header">Segunda</div>
+                        <div class="grid-header">Terça</div>
+                        <div class="grid-header">Quarta</div>
+                        <div class="grid-header">Quinta</div>
+                        <div class="grid-header">Sexta</div>
+
+                        ${gradeTurma[0].map((_, slotIndex) => { // Transpor para linhas serem slots
+                            let rowHtml = `<div class="grid-time">${slotIndex + 1}º Aula</div>`;
+                            
+                            for (let dia = 0; dia < 5; dia++) {
+                                const discId = gradeTurma[dia][slotIndex];
+                                let cellContent = '';
+                                let cellStyle = '';
+
+                                if (discId) {
+                                    const disc = this.sys.data.disciplinas.find(d => d.id === discId);
+                                    if (disc) {
+                                        const prof = this.sys.data.professores.find(p => p.id === disc.professorId);
+                                        cellStyle = `background-color: ${disc.cor}; border-left: 4px solid var(--primary);`;
+                                        cellContent = `
+                                            <div class="cell-content">
+                                                <div class="subject-tag">${disc.nome}</div>
+                                                <div class="teacher-tag">${prof ? prof.nome : 'Sem Prof.'}</div>
+                                            </div>
+                                        `;
+                                    }
+                                }
+
+                                rowHtml += `<div class="grid-cell" style="${cellStyle}">${cellContent}</div>`;
+                            }
+                            return rowHtml;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+};
+
+// ==========================================
+// EVENT HANDLERS
+// ==========================================
+const Handlers = {
+    addTurma() {
+        const nome = document.getElementById('turma-nome').value;
+        const periodo = document.getElementById('turma-periodo').value;
+        if(!nome) return alert('Nome obrigatório');
+        App.sys.addTurma(nome, periodo);
+        App.render();
+    },
+
+    delTurma(id) {
+        if(confirm('Excluir turma?')) {
+            App.sys.deleteTurma(id);
+            App.render();
+        }
+    },
+
+    addProfessor() {
+        const nome = document.getElementById('prof-nome').value;
+        if(!nome) return alert('Nome obrigatório');
+
+        // Ler matriz
+        const slots = 5; // slots por dia
+        const dias = 5;
+        const matrix = [];
+        
+        // Inicializar matriz vazia
+        for(let d=0; d<dias; d++) matrix[d] = [];
+
+        // Preencher baseado no DOM
+        document.querySelectorAll('#prof-avail-wrapper .av-cell:not(.header)').forEach(cell => {
+            const d = parseInt(cell.dataset.dia);
+            const s = parseInt(cell.dataset.slot);
+            const isAvailable = cell.classList.contains('selected');
+            matrix[d][s] = isAvailable;
+        });
+
+        App.sys.addProfessor(nome, matrix);
+        App.render();
+    },
+
+    delProfessor(id) {
+        if(confirm('Excluir professor?')) {
+            App.sys.deleteProfessor(id);
+            App.render();
+        }
+    },
+
+    addDisciplina() {
+        const nome = document.getElementById('disc-nome').value;
+        const turmaId = document.getElementById('disc-turma').value;
+        const profId = document.getElementById('disc-prof').value || null;
+        const aulas = document.getElementById('disc-aulas').value;
+
+        if(!nome || !turmaId || !aulas) return alert('Preencha os campos obrigatórios');
+        
+        App.sys.addDisciplina(nome, turmaId, profId, aulas);
+        App.render();
+    },
+
+    delDisciplina(id) {
+        App.sys.deleteDisciplina(id);
+        App.render();
+    },
+
+    gerarGrade() {
+        const conflitos = App.sys.gerarGrade();
+        App.render();
+        
+        const painel = document.getElementById('conflict-panel');
+        if(conflitos.length > 0) {
+            painel.innerHTML = `
+                <div class="alert alert-error">
+                    <strong>Atenção:</strong> Alguns horários não puderam ser preenchidos:
+                    <ul>${conflitos.map(c => `<li>${c}</li>`).join('')}</ul>
+                </div>
+            `;
+        } else {
+            painel.innerHTML = `<div class="alert alert-info">Grade gerada com sucesso sem conflitos!</div>`;
+        }
+    }
+};
+
+// Start App
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});
+
+</script>
+</body>
+</html>
