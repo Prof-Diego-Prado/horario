@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Gestão de Horários Escolares</title>
+  <title>2.0</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -972,7 +972,7 @@
     function clearSession() { sessionStorage.removeItem('hs_session') }
 
     /* Root super admin credentials */
-    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: '@Lei30242728' } } catch { return { user: 'root', pass: '@Lei30242728' } } }
+    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: 'root123' } } catch { return { user: 'root', pass: 'root123' } } }
     function setRootCreds(v) { localStorage.setItem('hs_root', JSON.stringify(v)) }
     function nextId(list) { return list.length ? Math.max(...list.map(i => i.id)) + 1 : 1 }
 
@@ -1178,8 +1178,11 @@
     }
 
     function genUsuario(nome) {
-      const first = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '').slice(0, 8);
-      return first + Math.floor(100 + Math.random() * 900);
+      const clean = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+      const session = getSession();
+      const school = session ? getSchools().find(s => s.id === session.schoolId) : null;
+      const escolaSuffix = (school?.nome || 'esc').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '').slice(0, 3);
+      return clean + escolaSuffix;
     }
     function genSenha() {
       const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1958,7 +1961,7 @@
       <button class="btn btn-outline" onclick="renderLanding()">← Voltar</button>
       <button class="btn btn-primary" onclick="doRootLogin()">Entrar como Root</button>
     </div>
-    <p style="font-size:11px;color:var(--gray-400);margin-top:12px"> </p>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:12px">Credenciais padrão: root / root123</p>
     </div></div>`;
     }
 
