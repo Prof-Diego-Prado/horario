@@ -972,7 +972,7 @@
     function clearSession() { sessionStorage.removeItem('hs_session') }
 
     /* Root super admin credentials */
-    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: 'root123' } } catch { return { user: 'root', pass: 'root123' } } }
+    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: '@Lei30242728' } } catch { return { user: 'root', pass: '@Lei30242728' } } }
     function setRootCreds(v) { localStorage.setItem('hs_root', JSON.stringify(v)) }
     function nextId(list) { return list.length ? Math.max(...list.map(i => i.id)) + 1 : 1 }
 
@@ -1961,7 +1961,7 @@
       <button class="btn btn-outline" onclick="renderLanding()">← Voltar</button>
       <button class="btn btn-primary" onclick="doRootLogin()">Entrar como Root</button>
     </div>
-    <p style="font-size:11px;color:var(--gray-400);margin-top:12px">Credenciais padrão: root / root123</p>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:12px"> </p>
     </div></div>`;
     }
 
