@@ -970,6 +970,10 @@
     function getSession() { try { return JSON.parse(sessionStorage.getItem('hs_session')) } catch { return null } }
     function setSession(v) { sessionStorage.setItem('hs_session', JSON.stringify(v)) }
     function clearSession() { sessionStorage.removeItem('hs_session') }
+
+    /* Root super admin credentials */
+    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: 'root123' } } catch { return { user: 'root', pass: 'root123' } } }
+    function setRootCreds(v) { localStorage.setItem('hs_root', JSON.stringify(v)) }
     function nextId(list) { return list.length ? Math.max(...list.map(i => i.id)) + 1 : 1 }
 
     /* ============================================================
@@ -1040,7 +1044,8 @@
       } else {
         html += `<p style="color:var(--gray-400);margin-bottom:24px;font-size:14px">Nenhuma escola cadastrada. Comece cadastrando sua escola!</p>`;
       }
-      html += `<button class="btn btn-primary btn-lg" onclick="showRegister()" style="margin-top:8px">+ Cadastrar Nova Escola</button></div>`;
+      html += `<button class="btn btn-primary btn-lg" onclick="showRegister()" style="margin-top:8px">+ Cadastrar Nova Escola</button>
+      <p style="margin-top:16px"><a href="#" onclick="event.preventDefault();showRootLogin()" style="color:var(--gray-400);font-size:12px;text-decoration:underline">🛡️ Acesso Root</a></p></div>`;
       root.innerHTML = html;
     }
 
@@ -1189,10 +1194,15 @@
       if (!session) { renderLanding(); return }
       const root = document.getElementById('root');
       const isProf = session.role === 'professor';
-      const displayName = isProf ? session.professorNome : session.adminNome;
-      const roleBadge = isProf ? '👨‍🏫 Professor' : '🔑 Administrador';
+      const isRoot = session.role === 'root';
+      const displayName = isRoot ? 'Super Admin' : (isProf ? session.professorNome : session.adminNome);
+      const roleBadge = isRoot ? '🛡️ Root' : (isProf ? '👨‍🏫 Professor' : '🔑 Administrador');
       let navItems = '';
-      if (isProf) {
+      if (isRoot) {
+        navItems = `
+        <button class="nav-link active" data-view="gerenciarescolas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Gerenciar Escolas</button>
+        <button class="nav-link" data-view="rootconfig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Configurações</button>`;
+      } else if (isProf) {
         navItems = `
         <button class="nav-link active" data-view="meushorarios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Meus Horários</button>
         <button class="nav-link" data-view="alterarsenha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Alterar Senha</button>`;
@@ -1210,7 +1220,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <h1>📚 Horários Escolares</h1>
-      <div class="school-name">🏫 ${esc(session.schoolNome)}</div>
+      <div class="school-name">${isRoot ? '🛡️ Painel Root' : '🏫 ' + esc(session.schoolNome)}</div>
       <div class="admin-name">${roleBadge} ${esc(displayName)}</div>
     </div>
     <nav class="sidebar-nav">${navItems}</nav>
@@ -1228,15 +1238,15 @@
   </div></div>`;
       document.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', () => navigate(l.dataset.view)));
       setInterval(() => { const d = new Date(); const cl = document.getElementById('clock'); if (cl) cl.textContent = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR') }, 1000);
-      const defaultView = isProf ? 'meushorarios' : 'dashboard';
+      const defaultView = isRoot ? 'gerenciarescolas' : (isProf ? 'meushorarios' : 'dashboard');
       navigate(location.hash.slice(1) || defaultView);
     }
 
     /* ============================================================
        SPA ROUTER (inside app)
        ============================================================ */
-    const appViews = { dashboard: renderDashboard, disciplinas: renderDisciplinas, turmas: renderTurmas, professores: renderProfessores, disponibilidade: renderDisponibilidade, gerar: renderGerar, importarpdf: renderImportarPDF, meushorarios: renderMeusHorarios, alterarsenha: renderAlterarSenha };
-    const viewTitles = { dashboard: 'Dashboard', disciplinas: 'Disciplinas', turmas: 'Turmas', professores: 'Professores', disponibilidade: 'Disponibilidade', gerar: 'Gerar Grade', importarpdf: 'Importar PDF', meushorarios: 'Meus Horários', alterarsenha: 'Alterar Senha' };
+    const appViews = { dashboard: renderDashboard, disciplinas: renderDisciplinas, turmas: renderTurmas, professores: renderProfessores, disponibilidade: renderDisponibilidade, gerar: renderGerar, importarpdf: renderImportarPDF, meushorarios: renderMeusHorarios, alterarsenha: renderAlterarSenha, gerenciarescolas: renderGerenciarEscolas, rootconfig: renderRootConfig };
+    const viewTitles = { dashboard: 'Dashboard', disciplinas: 'Disciplinas', turmas: 'Turmas', professores: 'Professores', disponibilidade: 'Disponibilidade', gerar: 'Gerar Grade', importarpdf: 'Importar PDF', meushorarios: 'Meus Horários', alterarsenha: 'Alterar Senha', gerenciarescolas: 'Gerenciar Escolas', rootconfig: 'Configurações Root' };
 
     function navigate(view) {
       if (!getSession()) { renderLanding(); return }
@@ -1818,6 +1828,109 @@
       toast('Senha alterada com sucesso!');
       renderAlterarSenha();
     }
+
+    /* ============================================================
+       ROOT SUPER ADMIN
+       ============================================================ */
+    function showRootLogin() {
+      const root = document.getElementById('root');
+      root.innerHTML = `<div class="auth-wrapper"><div class="logo"><h1>📚 Horários Escolares</h1><p>🛡️ Acesso Root / Super Administrador</p></div>
+    <div class="auth-card"><h2>Login Root</h2>
+    <div class="form-group"><label>Usuário</label><input class="form-control" id="root-user" placeholder="Usuário root"></div>
+    <div class="form-group"><label>Senha</label><input type="password" class="form-control" id="root-pass" placeholder="Senha root"></div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-outline" onclick="renderLanding()">← Voltar</button>
+      <button class="btn btn-primary" onclick="doRootLogin()">Entrar como Root</button>
+    </div>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:12px">Credenciais padrão: root / root123</p>
+    </div></div>`;
+    }
+
+    function doRootLogin() {
+      const user = document.getElementById('root-user').value.trim();
+      const pass = document.getElementById('root-pass').value;
+      const creds = getRootCreds();
+      if (user !== creds.user || pass !== creds.pass) { toast('Credenciais incorretas', 'error'); return }
+      setSession({ role: 'root', schoolNome: 'Root' });
+      toast('Bem-vindo, Super Admin!');
+      initApp();
+    }
+
+    function renderGerenciarEscolas() {
+      const schools = getSchools();
+      const app = document.getElementById('app');
+      let html = `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon blue">🏫</div><div class="stat-info"><h4>${schools.length}</h4><p>Escolas</p></div></div>
+    <div class="stat-card"><div class="stat-icon green">👤</div><div class="stat-info"><h4>${schools.reduce((a, s) => { try { return a + (JSON.parse(localStorage.getItem('hs_' + s.id + '_professores')) || []).length } catch { return a } }, 0)}</h4><p>Professores</p></div></div>
+    <div class="stat-card"><div class="stat-icon orange">🎓</div><div class="stat-info"><h4>${schools.reduce((a, s) => { try { return a + (JSON.parse(localStorage.getItem('hs_' + s.id + '_turmas')) || []).length } catch { return a } }, 0)}</h4><p>Turmas</p></div></div>
+    </div>`;
+
+      html += `<div class="card"><div class="card-header"><h3>Escolas Cadastradas</h3>
+    <button class="btn btn-primary" onclick="doLogout();showRegister()">+ Nova Escola</button></div>`;
+
+      if (!schools.length) {
+        html += `<p style="color:var(--gray-500)">Nenhuma escola cadastrada.</p>`;
+      } else {
+        html += `<table><thead><tr><th>ID</th><th>Escola</th><th>Cidade</th><th>Aulas</th><th>Admin</th><th>E-mail</th><th>Dados</th><th>Ações</th></tr></thead><tbody>`;
+        schools.forEach(s => {
+          let nProf = 0, nTurm = 0, nDisc = 0;
+          try { nProf = (JSON.parse(localStorage.getItem('hs_' + s.id + '_professores')) || []).length } catch { }
+          try { nTurm = (JSON.parse(localStorage.getItem('hs_' + s.id + '_turmas')) || []).length } catch { }
+          try { nDisc = (JSON.parse(localStorage.getItem('hs_' + s.id + '_disciplinas')) || []).length } catch { }
+          html += `<tr><td>${s.id}</td><td><strong>${esc(s.nome)}</strong></td><td>${esc(s.cidade || '')}</td><td>${s.numAulas || 5}</td><td>${esc(s.adminNome)}</td><td>${esc(s.adminEmail)}</td>
+          <td><small>${nDisc} disc, ${nTurm} turm, ${nProf} prof</small></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteSchool(${s.id})">🗑️ Excluir</button></td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+      html += `</div>`;
+      app.innerHTML = html;
+    }
+
+    function deleteSchool(id) {
+      const school = getSchools().find(s => s.id === id);
+      if (!school) return;
+      if (!confirm(`⚠️ ATENÇÃO: Excluir a escola "${school.nome}"?\n\nTodos os dados (disciplinas, turmas, professores, grades) serão permanentemente removidos.\n\nEsta ação NÃO pode ser desfeita.`)) return;
+      /* Remove all namespaced localStorage keys */
+      const prefix = 'hs_' + id + '_';
+      const keysToDelete = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith(prefix)) keysToDelete.push(key);
+      }
+      keysToDelete.forEach(k => localStorage.removeItem(k));
+      /* Remove from schools registry */
+      setSchools(getSchools().filter(s => s.id !== id));
+      toast(`Escola "${school.nome}" excluída com todos os dados.`);
+      renderGerenciarEscolas();
+    }
+
+    function renderRootConfig() {
+      const creds = getRootCreds();
+      const app = document.getElementById('app');
+      app.innerHTML = `<div class="card" style="max-width:500px"><div class="card-header"><h3>Configurações Root</h3></div>
+    <div class="form-group"><label>Usuário atual</label><input class="form-control" id="rconf-user" value="${esc(creds.user)}"></div>
+    <div class="form-group"><label>Senha atual</label><input type="password" class="form-control" id="rconf-old" placeholder="Senha atual"></div>
+    <div class="form-group"><label>Nova senha</label><input type="password" class="form-control" id="rconf-new" placeholder="Nova senha"></div>
+    <div class="form-group"><label>Confirmar nova senha</label><input type="password" class="form-control" id="rconf-new2" placeholder="Repita"></div>
+    <button class="btn btn-primary" onclick="saveRootConfig()">Salvar Configurações</button></div>`;
+    }
+
+    function saveRootConfig() {
+      const creds = getRootCreds();
+      const user = document.getElementById('rconf-user').value.trim();
+      const old = document.getElementById('rconf-old').value;
+      const nova = document.getElementById('rconf-new').value;
+      const nova2 = document.getElementById('rconf-new2').value;
+      if (!user) { toast('Usuário não pode ser vazio', 'error'); return }
+      if (old !== creds.pass) { toast('Senha atual incorreta', 'error'); return }
+      if (nova.length < 4) { toast('Nova senha deve ter no mínimo 4 caracteres', 'error'); return }
+      if (nova !== nova2) { toast('As senhas não coincidem', 'error'); return }
+      setRootCreds({ user, pass: nova });
+      toast('Credenciais root atualizadas!');
+      renderRootConfig();
+    }
+
     if (getSession()) initApp();
     else renderLanding();
   </script>
