@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>2.1</title>
+  <title>Gestão de Horários Escolares</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1612,8 +1612,26 @@
             if (it.str.trim()) allItems.push({ x: Math.round(it.transform[4]), y: Math.round(it.transform[5]), text: it.str.trim(), page: pg });
           });
         }
+        console.log('[PDF Debug] Total items extracted:', allItems.length);
+        console.log('[PDF Debug] First 50 items:', JSON.stringify(allItems.slice(0, 50), null, 2));
         const parsed = parsePDFItems(allItems);
         const analysis = analyzePDFData(parsed);
+        if (!parsed.length) {
+          /* Show debug dump when nothing found */
+          const rows = groupYRows(allItems, 4);
+          let dbg = '<h3>🔍 Debug: Conteúdo extraído do PDF</h3>';
+          dbg += `<p>Total de itens: <strong>${allItems.length}</strong> | Linhas agrupadas: <strong>${rows.length}</strong></p>`;
+          dbg += '<div style="max-height:500px;overflow:auto;background:#1a1a2e;color:#e0e0e0;padding:12px;border-radius:8px;font-family:monospace;font-size:12px">';
+          rows.slice(0, 40).forEach((r, i) => {
+            const texts = r.items.map(it => `[x:${it.x}]"${it.text}"`).join('  ');
+            const isHeader = /\bhor/i.test(r.items.map(it => it.text).join(' ')) && /\bseg/i.test(r.items.map(it => it.text).join(' '));
+            dbg += `<div style="margin-bottom:4px;${isHeader ? 'color:#4fc3f7;font-weight:bold' : ''}">Row ${i} (y:${r.y}): ${texts}</div>`;
+          });
+          dbg += '</div>';
+          dbg += '<p style="margin-top:12px;color:var(--gray-500)">⚠️ Nenhum professor encontrado. Compartilhe esse debug para diagnóstico.</p>';
+          preview.innerHTML = dbg;
+          return;
+        }
         showPDFPreview(parsed, analysis);
       } catch (e) {
         preview.innerHTML = `<p style="color:red">❌ Erro ao processar PDF: ${e.message}</p>`;
