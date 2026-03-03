@@ -1662,12 +1662,38 @@
     }
 
     function parsePDFItems(allItems) {
+      /* Group items by page first — each page has its own set of professors */
+      const byPage = {};
+      allItems.forEach(it => {
+        if (!byPage[it.page]) byPage[it.page] = [];
+        byPage[it.page].push(it);
+      });
+
       const result = [];
-      const rows = groupYRows(allItems, 4);
+      const pages = Object.keys(byPage).map(Number).sort((a, b) => a - b);
+      pages.forEach(pg => {
+        const pageResult = parsePageItems(byPage[pg]);
+        pageResult.forEach(p => {
+          /* Merge if same professor name already exists (from different pages) */
+          const existing = result.find(r => r.nome === p.nome);
+          if (existing) {
+            existing.slots.push(...p.slots);
+            if (p.horLabels) p.horLabels.forEach((l, i) => { if (l) existing.horLabels[i] = l; });
+          } else {
+            result.push(p);
+          }
+        });
+      });
+      return result;
+    }
+
+    function parsePageItems(pageItems) {
+      const result = [];
+      const rows = groupYRows(pageItems, 4);
 
       let current = null;
-      let colXs = null; /* X positions for [Hor, Seg, Ter, Qua, Qui, Sex] */
-      let horCounter = 0; /* Sequential index for each time row per professor */
+      let colXs = null;
+      let horCounter = 0;
 
       for (let ri = 0; ri < rows.length; ri++) {
         const row = rows[ri];
@@ -1675,21 +1701,24 @@
 
         /* Detect header row: Hor Seg Ter Qua Qui Sex */
         if (/\bhor\b/i.test(rowText) && /\bseg\b/i.test(rowText) && /\bsex\b/i.test(rowText)) {
-          /* Extract column X positions from header items */
           const dayWords = ['hor', 'seg', 'ter', 'qua', 'qui', 'sex'];
           colXs = [];
           dayWords.forEach(dw => {
             const found = row.items.find(it => it.text.toLowerCase().startsWith(dw));
             if (found) colXs.push(found.x);
           });
-          if (colXs.length < 6) colXs = null; /* Incomplete header, skip */
+          if (colXs.length < 6) colXs = null;
 
-          /* The line above the header is the professor name */
+          /* The row above the header is the professor name */
           if (ri > 0) {
             const prevRow = rows[ri - 1];
-            const name = prevRow.items.map(it => it.text).join(' ').trim();
-            if (name.length > 1 && name.length < 80 && !name.match(/^\d{1,2}:\d{2}/)) {
-              current = { nome: name, slots: [], horLabels: [] };
+            /* Filter out footer/title text, take only items that look like names */
+            const nameItems = prevRow.items.filter(it =>
+              !it.text.match(/^(Colégio|Relatório|Horário|Página|www\.|^\d)/) &&
+              it.text.length > 1 && it.text.length < 60
+            );
+            if (nameItems.length === 1) {
+              current = { nome: nameItems[0].text.trim(), slots: [], horLabels: [] };
               result.push(current);
               horCounter = 0;
             }
@@ -1699,38 +1728,29 @@
 
         if (!current || !colXs) continue;
 
-        /* Check if this row starts with a time (horario) */
+        /* Check if this row starts with a time (horário) */
         const firstItem = row.items[0];
-        if (!firstItem || !firstItem.text.match(/^\d{1,2}:\d{2}$/)) continue;
+        if (!firstItem) continue;
+        /* Handle "07:30 -------------" pattern: extract just the time */
+        const timeMatch = firstItem.text.match(/^(\d{1,2}:\d{2})/);
+        if (!timeMatch) continue;
 
         const horIdx = horCounter++;
-        current.horLabels[horIdx] = firstItem.text;
+        current.horLabels[horIdx] = timeMatch[1];
 
         /* Assign remaining items to columns based on X position */
-        const cells = ['', '', '', '', '']; /* Seg, Ter, Qua, Qui, Sex */
-        row.items.slice(1).forEach(it => {
+        const cells = ['', '', '', '', ''];
+        row.items.forEach(it => {
+          if (it === firstItem) return; /* Skip the time item */
+          /* Skip dash-only items */
+          if (it.text.match(/^[-–]+$/)) return;
+          /* Skip time+dash items like "07:30 ---..." */
+          if (it.text.match(/^\d{1,2}:\d{2}\s+[-–]+$/)) return;
           const col = findNearestCol(it.x, colXs);
-          if (col >= 1 && col <= 5) { /* col 0 = Hor, 1-5 = days */
+          if (col >= 1 && col <= 5) {
             cells[col - 1] = (cells[col - 1] ? cells[col - 1] + ' ' : '') + it.text;
           }
         });
-
-        /* Also check items that might be on a slightly different Y but same "visual row"
-           look at the next row if it's very close in Y and doesn't start with a time */
-        if (ri + 1 < rows.length) {
-          const nextRow = rows[ri + 1];
-          const yDiff = Math.abs(row.y - nextRow.y);
-          const nextFirst = nextRow.items[0]?.text || '';
-          if (yDiff < 12 && !nextFirst.match(/^\d{1,2}:\d{2}$/) && !(/\bhor\b/i.test(nextFirst))) {
-            nextRow.items.forEach(it => {
-              const col = findNearestCol(it.x, colXs);
-              if (col >= 1 && col <= 5) {
-                cells[col - 1] = (cells[col - 1] ? cells[col - 1] + ' ' : '') + it.text;
-              }
-            });
-            ri++; /* Skip the merged row */
-          }
-        }
 
         for (let d = 0; d < 5; d++) {
           const cell = cells[d].trim();
