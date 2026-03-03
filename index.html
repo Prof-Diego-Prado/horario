@@ -991,9 +991,16 @@
       nextId(list) { return nextId(list) }
     };
 
-    const PERIODOS = { matutino: { label: 'Matutino', aulas: 5 }, vespertino: { label: 'Vespertino', aulas: 5 }, noturno: { label: 'Noturno', aulas: 4 }, integral: { label: 'Integral', aulas: 9 } };
     const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
     const HORARIOS_LABEL = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º', '9º'];
+    const DEFAULT_HORARIOS = { 5: ['07:30', '08:20', '09:10', '10:20', '11:10'], 6: ['07:30', '08:20', '09:10', '10:20', '11:10', '11:55'], 9: ['07:30', '08:20', '09:10', '10:20', '11:10', '11:55', '13:30', '14:20', '15:10'] };
+
+    function getSchoolConfig() {
+      const session = getSession();
+      if (!session) return { numAulas: 5, horarios: DEFAULT_HORARIOS[5] };
+      const school = getSchools().find(s => s.id === session.schoolId);
+      return { numAulas: school?.numAulas || 5, horarios: school?.horarios || DEFAULT_HORARIOS[school?.numAulas || 5] };
+    }
 
     /* ============================================================
        UTILITIES
@@ -1027,7 +1034,7 @@
           const onclick = _landingRole === 'admin' ? `showLogin(${s.id})` : `showTeacherLogin(${s.id})`;
           html += `<div class="school-card" onclick="${onclick}">
         <h3>🏫 ${esc(s.nome)}</h3><p>${esc(s.cidade || '')}</p>
-        <div class="school-admin">👤 Admin: ${esc(s.adminNome)}</div></div>`;
+        <div class="school-admin">� ${s.numAulas || 5} aulas/dia &nbsp; 👤 ${esc(s.adminNome)}</div></div>`;
         });
         html += `</div>`;
       } else {
@@ -1045,6 +1052,12 @@
     <div class="auth-card"><h2>Cadastrar Escola</h2>
     <div class="form-group"><label>Nome da Escola</label><input class="form-control" id="reg-escola" placeholder="Ex: Escola Municipal José de Alencar"></div>
     <div class="form-group"><label>Cidade / UF</label><input class="form-control" id="reg-cidade" placeholder="Ex: São Paulo - SP"></div>
+    <div class="auth-divider">Configuração de Aulas</div>
+    <div class="form-group"><label>Quantidade de Aulas por Dia</label>
+      <select class="form-control" id="reg-num-aulas" onchange="updateRegHorarios()">
+        <option value="5">5 aulas</option><option value="6">6 aulas</option><option value="9">9 aulas</option>
+      </select></div>
+    <div id="reg-horarios-container"></div>
     <div class="auth-divider">Dados do Administrador</div>
     <div class="form-group"><label>Nome do Responsável</label><input class="form-control" id="reg-admin" placeholder="Nome completo"></div>
     <div class="form-group"><label>E-mail</label><input type="email" class="form-control" id="reg-email" placeholder="admin@escola.com"></div>
@@ -1054,11 +1067,28 @@
       <button class="btn btn-outline" onclick="renderLanding()">← Voltar</button>
       <button class="btn btn-primary" onclick="doRegister()">Cadastrar Escola</button>
     </div></div></div>`;
+      updateRegHorarios();
+    }
+
+    function updateRegHorarios() {
+      const n = parseInt(document.getElementById('reg-num-aulas').value);
+      const defaults = DEFAULT_HORARIOS[n] || DEFAULT_HORARIOS[5];
+      let html = '<label style="font-weight:600;font-size:13px;margin-bottom:8px;display:block">Horário de cada aula</label>';
+      for (let i = 0; i < n; i++) {
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:13px;min-width:50px">${i + 1}ª Aula</span>
+          <input type="time" class="form-control reg-hor-input" value="${defaults[i] || '07:00'}" style="max-width:140px">
+        </div>`;
+      }
+      document.getElementById('reg-horarios-container').innerHTML = html;
     }
 
     function doRegister() {
       const nome = document.getElementById('reg-escola').value.trim();
       const cidade = document.getElementById('reg-cidade').value.trim();
+      const numAulas = parseInt(document.getElementById('reg-num-aulas').value);
+      const horInputs = document.querySelectorAll('.reg-hor-input');
+      const horarios = [...horInputs].map(inp => inp.value);
       const adminNome = document.getElementById('reg-admin').value.trim();
       const email = document.getElementById('reg-email').value.trim().toLowerCase();
       const senha = document.getElementById('reg-senha').value;
@@ -1069,7 +1099,7 @@
       let schools = getSchools();
       if (schools.find(s => s.adminEmail === email)) { toast('E-mail já cadastrado em outra escola', 'error'); return }
       const id = nextId(schools);
-      schools.push({ id, nome, cidade, adminNome, adminEmail: email, senha });
+      schools.push({ id, nome, cidade, numAulas, horarios, adminNome, adminEmail: email, senha });
       setSchools(schools);
       toast('Escola cadastrada com sucesso!');
       showLogin(id);
@@ -1242,7 +1272,7 @@
     function dashFilterChanged() {
       const type = document.getElementById('dash-filter-type').value;
       const sel = document.getElementById('dash-filter-value'); sel.innerHTML = '';
-      if (type === 'turma') DB.turmas.forEach(t => { sel.innerHTML += `<option value="${t.id}">${t.serie} - ${t.nome} (${PERIODOS[t.periodo].label})</option>` });
+      if (type === 'turma') DB.turmas.forEach(t => { sel.innerHTML += `<option value="${t.id}">${t.serie} - ${t.nome}</option>` });
       else DB.professores.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.nome}</option>` });
       dashRenderTable();
     }
@@ -1255,10 +1285,10 @@
       if (!val) { container.innerHTML = '<p style="color:var(--gray-500);padding:20px">Nenhum dado disponível.</p>'; return }
       if (type === 'turma') {
         const turma = DB.turmas.find(t => t.id === val); if (!turma) { container.innerHTML = ''; return }
-        const grade = grades.find(g => g.turmaId === val); const numAulas = PERIODOS[turma.periodo].aulas;
+        const grade = grades.find(g => g.turmaId === val); const cfg = getSchoolConfig(); const numAulas = cfg.numAulas;
         let t = `<table class="timetable"><tr><th>Horário</th>`; DIAS.forEach(d => t += `<th>${d}</th>`); t += `</tr>`;
         for (let h = 0; h < numAulas; h++) {
-          t += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula</td>`;
+          t += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula<br><small>${cfg.horarios[h] || ''}</small></td>`;
           for (let d = 0; d < 5; d++) {
             const slot = grade?.slots?.find(s => s.dia === d && s.horario === h);
             if (slot) {
@@ -1272,8 +1302,9 @@
       } else {
         const prof = DB.professores.find(p => p.id === val); if (!prof) { container.innerHTML = ''; return }
         let t = `<table class="timetable"><tr><th>Horário</th>`; DIAS.forEach(d => t += `<th>${d}</th>`); t += `</tr>`;
-        for (let h = 0; h < 9; h++) {
-          t += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula</td>`;
+        for (let h = 0; h < getSchoolConfig().numAulas; h++) {
+          const cfg = getSchoolConfig();
+          t += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula<br><small>${cfg.horarios[h] || ''}</small></td>`;
           for (let d = 0; d < 5; d++) {
             let found = [];
             grades.forEach(g => {
@@ -1334,10 +1365,9 @@
     <button class="btn btn-primary" onclick="editTurma()">+ Nova Turma</button></div>`;
       if (!list.length) html += `<p style="color:var(--gray-500)">Nenhuma turma cadastrada.</p>`;
       else {
-        html += `<table><thead><tr><th>ID</th><th>Série</th><th>Nome</th><th>Período</th><th>Aulas/Dia</th><th>Ações</th></tr></thead><tbody>`;
+        html += `<table><thead><tr><th>ID</th><th>Série</th><th>Nome</th><th>Ações</th></tr></thead><tbody>`;
         list.forEach(t => {
-          const p = PERIODOS[t.periodo]; const bc = t.periodo === 'matutino' ? 'blue' : t.periodo === 'vespertino' ? 'green' : t.periodo === 'noturno' ? 'purple' : 'orange';
-          html += `<tr><td>${t.id}</td><td>${t.serie}</td><td>${t.nome}</td><td><span class="badge badge-${bc}">${p.label}</span></td><td>${p.aulas}</td>
+          html += `<tr><td>${t.id}</td><td>${t.serie}</td><td>${t.nome}</td>
       <td><button class="btn btn-outline btn-sm" onclick="editTurma(${t.id})">Editar</button>
       <button class="btn btn-danger btn-sm" onclick="deleteTurma(${t.id})">Excluir</button></td></tr>`
         });
@@ -1347,20 +1377,18 @@
     }
     function editTurma(id) {
       const t = id ? DB.turmas.find(x => x.id === id) : null;
-      let opts = Object.entries(PERIODOS).map(([k, v]) => `<option value="${k}" ${t?.periodo === k ? 'selected' : ''}>${v.label} (${v.aulas} aulas)</option>`).join('');
+      let opts = '';
       openModal(`<h3>${t ? 'Editar' : 'Nova'} Turma</h3>
     <div class="form-group"><label>Série</label><input class="form-control" id="turma-serie" value="${t?.serie || ''}" placeholder="Ex: 1º Ano"></div>
     <div class="form-group"><label>Nome</label><input class="form-control" id="turma-nome" value="${t?.nome || ''}" placeholder="Ex: Turma A"></div>
-    <div class="form-group"><label>Período</label><select class="form-control" id="turma-periodo">${opts}</select></div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveTurma(${id || 0})">Salvar</button></div>`);
     }
     function saveTurma(id) {
       const serie = document.getElementById('turma-serie').value.trim(); const nome = document.getElementById('turma-nome').value.trim();
-      const periodo = document.getElementById('turma-periodo').value;
       if (!serie || !nome) { toast('Preencha todos os campos', 'error'); return } let list = DB.turmas;
-      if (id) { const i = list.findIndex(x => x.id === id); list[i] = { ...list[i], serie, nome, periodo } }
-      else list.push({ id: DB.nextId(list), serie, nome, periodo });
+      if (id) { const i = list.findIndex(x => x.id === id); list[i] = { ...list[i], serie, nome } }
+      else list.push({ id: DB.nextId(list), serie, nome });
       DB.turmas = list; closeModal(); toast('Turma salva!'); renderTurmas();
     }
     function deleteTurma(id) { if (!confirm('Excluir esta turma?')) return; DB.turmas = DB.turmas.filter(x => x.id !== id); toast('Turma excluída!'); renderTurmas() }
@@ -1439,9 +1467,10 @@
       if (!prof.disponibilidade) prof.disponibilidade = Array.from({ length: 5 }, () => Array(9).fill(true));
       let t = `<div style="overflow-x:auto"><table class="avail-grid"><tr><th>Horário</th>`;
       DIAS.forEach(d => t += `<th>${d}</th>`); t += `</tr>`;
-      for (let h = 0; h < 9; h++) {
-        t += `<tr><td class="slot-label" style="font-weight:600">${HORARIOS_LABEL[h]} Aula</td>`;
-        for (let d = 0; d < 5; d++) { t += `<td><input type="checkbox" ${prof.disponibilidade[d][h] ? 'checked' : ''} onchange="toggleDisp(${profId},${d},${h},this.checked)"></td>` }
+      for (let h = 0; h < getSchoolConfig().numAulas; h++) {
+        const cfg = getSchoolConfig();
+        t += `<tr><td class="slot-label" style="font-weight:600">${HORARIOS_LABEL[h]} Aula<br><small>${cfg.horarios[h] || ''}</small></td>`;
+        for (let d = 0; d < 5; d++) { t += `<td><input type="checkbox" ${prof.disponibilidade[d]?.[h] ? 'checked' : ''} onchange="toggleDisp(${profId},${d},${h},this.checked)"></td>` }
         t += `</tr>`
       }
       t += `</table></div><p style="margin-top:12px;font-size:12px;color:var(--gray-500)">✅ Marcado = Disponível neste horário</p>`;
@@ -1461,7 +1490,7 @@
       let html = `<div class="card"><div class="card-header"><h3>Gerar Grade de Horários</h3></div>
     <p style="margin-bottom:16px;font-size:14px;color:var(--gray-600)">Selecione as turmas para gerar automaticamente a grade de horários utilizando algoritmo de backtracking.</p>
     <div class="form-group"><label>Turmas</label><div class="checkbox-list" id="gerar-turmas">
-    ${turmas.map(t => `<label><input type="checkbox" value="${t.id}" checked> ${t.serie} - ${t.nome} (${PERIODOS[t.periodo].label})</label>`).join('')}
+    ${turmas.map(t => `<label><input type="checkbox" value="${t.id}" checked> ${t.serie} - ${t.nome}</label>`).join('')}
     </div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-success" onclick="executarGeracao()">⚡ Gerar Grade</button>
@@ -1486,7 +1515,7 @@
       allGrades.forEach(g => { (g.slots || []).forEach(s => { if (teacherSchedule[s.professorId]) teacherSchedule[s.professorId][s.dia][s.horario] = g.turmaId }) });
 
       for (const turma of turmas) {
-        const numAulas = PERIODOS[turma.periodo].aulas; const requirements = [];
+        const numAulas = getSchoolConfig().numAulas; const requirements = [];
         disciplinas.forEach(disc => {
           const profsForDisc = professores.filter(p => (p.disciplinaIds || []).includes(disc.id));
           profsForDisc.forEach(prof => { requirements.push({ disciplinaId: disc.id, professorId: prof.id, needed: disc.cargaHoraria, discNome: disc.nome, profNome: prof.nome }) });
@@ -1679,14 +1708,14 @@
       if (!prof) { document.getElementById('app').innerHTML = '<p>Professor não encontrado.</p>'; return }
       const grades = DB.grades;
       const compromissos = prof.compromissos || [];
-      const horLabels = ['07:30', '08:20', '09:10', '10:20', '11:10', '11:55'];
+      const cfg = getSchoolConfig();
 
       let html = `<div class="card"><div class="card-header"><h3>Grade de Horários — ${esc(prof.nome)}</h3></div>
     <div style="overflow-x:auto"><table class="timetable"><tr><th>Horário</th>`;
       DIAS.forEach(d => html += `<th>${d}</th>`); html += `</tr>`;
 
-      for (let h = 0; h < 9; h++) {
-        html += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula${h < horLabels.length ? '<br><small>' + horLabels[h] + '</small>' : ''}</td>`;
+      for (let h = 0; h < cfg.numAulas; h++) {
+        html += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula<br><small>${cfg.horarios[h] || ''}</small></td>`;
         for (let d = 0; d < 5; d++) {
           /* Check admin-assigned via grades engine */
           let adminSlots = [];
