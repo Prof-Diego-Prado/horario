@@ -1,656 +1,1342 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Netuna - Horários Escolares</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--navy:#1a2744;--navy-light:#243456;--navy-dark:#111b30;--accent:#3b82f6;--accent-hover:#2563eb;--gray-50:#f8fafc;--gray-100:#f0f2f5;--gray-200:#e2e8f0;--gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;--gray-600:#475569;--gray-700:#334155;--white:#fff;--danger:#ef4444;--danger-bg:#fef2f2;--success:#22c55e;--success-bg:#f0fdf4;--warning:#f59e0b;--warning-bg:#fffbeb;--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);--shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);--shadow-lg:0 10px 15px rgba(0,0,0,.1),0 4px 6px rgba(0,0,0,.05);--radius:8px;--radius-lg:12px;--transition:all .2s ease}
-body{font-family:'Inter',sans-serif;background:var(--gray-100);color:var(--gray-700);min-height:100vh;display:flex}
-/* Sidebar */
-.sidebar{width:260px;background:var(--navy);color:var(--white);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease}
-.sidebar-header{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
-.sidebar-header h1{font-size:18px;font-weight:700;letter-spacing:-.5px}
-.sidebar-header p{font-size:12px;color:var(--gray-400);margin-top:4px}
-.sidebar-nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px}
-.nav-link{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--radius);color:var(--gray-300);text-decoration:none;font-size:14px;font-weight:500;transition:var(--transition);cursor:pointer;border:none;background:none;width:100%;text-align:left}
-.nav-link:hover{background:var(--navy-light);color:var(--white)}
-.nav-link.active{background:var(--accent);color:var(--white)}
-.nav-link svg{width:20px;height:20px;flex-shrink:0}
-/* Main */
-.main{margin-left:260px;flex:1;min-height:100vh;display:flex;flex-direction:column}
-.topbar{background:var(--white);padding:16px 32px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.topbar h2{font-size:20px;font-weight:700;color:var(--navy)}
-.menu-toggle{display:none;background:none;border:none;cursor:pointer;color:var(--navy);padding:8px}
-.content{padding:32px;flex:1}
-/* Cards */
-.card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:24px;margin-bottom:24px;transition:var(--transition)}
-.card:hover{box-shadow:var(--shadow-md)}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.card-header h3{font-size:16px;font-weight:600;color:var(--navy)}
-/* Buttons */
-.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;transition:var(--transition);border:none;font-family:inherit}
-.btn-primary{background:var(--accent);color:var(--white)}.btn-primary:hover{background:var(--accent-hover)}
-.btn-success{background:var(--success);color:var(--white)}.btn-success:hover{opacity:.9}
-.btn-danger{background:var(--danger);color:var(--white)}.btn-danger:hover{opacity:.9}
-.btn-outline{background:transparent;border:1px solid var(--gray-300);color:var(--gray-600)}.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
-.btn-sm{padding:6px 12px;font-size:12px}
-/* Tables */
-table{width:100%;border-collapse:collapse}
-th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--gray-200);font-size:13px}
-th{background:var(--gray-50);font-weight:600;color:var(--gray-600);text-transform:uppercase;font-size:11px;letter-spacing:.5px}
-tr:hover td{background:var(--gray-50)}
-/* Forms */
-.form-group{margin-bottom:16px}
-.form-group label{display:block;font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:6px}
-.form-control{width:100%;padding:9px 14px;border:1px solid var(--gray-300);border-radius:var(--radius);font-size:14px;font-family:inherit;transition:var(--transition);background:var(--white)}
-.form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
-/* Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
-.modal-overlay.active{opacity:1;pointer-events:all}
-.modal{background:var(--white);border-radius:var(--radius-lg);padding:28px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(.95);transition:transform .2s}
-.modal-overlay.active .modal{transform:scale(1)}
-.modal h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px}
-.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
-/* Timetable */
-.timetable{width:100%;border-collapse:collapse;font-size:12px}
-.timetable th,.timetable td{border:1px solid var(--gray-200);padding:8px;text-align:center;min-width:120px}
-.timetable th{background:var(--navy);color:var(--white);font-size:11px}
-.timetable td{background:var(--white);vertical-align:top;height:60px;cursor:pointer;transition:var(--transition)}
-.timetable td:hover{background:var(--gray-50)}
-.timetable td.conflict{background:var(--danger-bg);border-color:var(--danger)}
-.timetable .slot-label{background:var(--gray-50);font-weight:600;color:var(--gray-600);cursor:default;min-width:80px}
-.timetable .cell-content{font-size:11px;line-height:1.4}.cell-content .disc{font-weight:600;color:var(--navy)}.cell-content .prof{color:var(--gray-500)}
-/* Availability Grid */
-.avail-grid{border-collapse:collapse}
-.avail-grid th,.avail-grid td{border:1px solid var(--gray-200);padding:8px 12px;text-align:center;font-size:13px}
-.avail-grid th{background:var(--navy);color:var(--white)}
-.avail-grid td{cursor:pointer;transition:var(--transition)}
-.avail-grid input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}
-/* Stats */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
-.stat-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:16px}
-.stat-icon{width:48px;height:48px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:22px}
-.stat-icon.blue{background:#dbeafe;color:var(--accent)}
-.stat-icon.green{background:#dcfce7;color:var(--success)}
-.stat-icon.orange{background:#fef3c7;color:var(--warning)}
-.stat-icon.red{background:#fee2e2;color:var(--danger)}
-.stat-info h4{font-size:24px;font-weight:700;color:var(--navy)}.stat-info p{font-size:12px;color:var(--gray-500)}
-/* Filter bar */
-.filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
-.filter-bar select{max-width:250px}
-/* Toast */
-.toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}
-.toast{padding:12px 20px;border-radius:var(--radius);color:var(--white);font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);animation:slideIn .3s ease}
-.toast.success{background:var(--success)}.toast.error{background:var(--danger)}.toast.warning{background:var(--warning)}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-/* Badges */
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-blue{background:#dbeafe;color:#1d4ed8}.badge-green{background:#dcfce7;color:#15803d}.badge-orange{background:#fef3c7;color:#b45309}.badge-purple{background:#f3e8ff;color:#7c3aed}
-/* Multi-select */
-.checkbox-list{max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px}
-.checkbox-list label{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:13px;cursor:pointer;border-radius:4px}
-.checkbox-list label:hover{background:var(--gray-50)}
-/* Responsive */
-@media(max-width:768px){
-.sidebar{transform:translateX(-100%)}
-.sidebar.open{transform:translateX(0)}
-.main{margin-left:0}
-.menu-toggle{display:block}
-.content{padding:16px}
-.stats-grid{grid-template-columns:1fr 1fr}
-.timetable{font-size:10px}.timetable th,.timetable td{padding:4px;min-width:80px}
-}
-@media(max-width:480px){.stats-grid{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gestão de Horários Escolares</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --navy: #1a2744;
+      --navy-light: #243456;
+      --navy-dark: #111b30;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --gray-50: #f8fafc;
+      --gray-100: #f0f2f5;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --white: #fff;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --success: #22c55e;
+      --success-bg: #f0fdf4;
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .1), 0 1px 2px rgba(0, 0, 0, .06);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, .07), 0 2px 4px rgba(0, 0, 0, .06);
+      --shadow-lg: 0 10px 15px rgba(0, 0, 0, .1), 0 4px 6px rgba(0, 0, 0, .05);
+      --radius: 8px;
+      --radius-lg: 12px;
+      --transition: all .2s ease
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-700);
+      min-height: 100vh
+    }
+
+    /* ---- AUTH PAGES ---- */
+    .auth-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--navy) 0%, #1e3a5f 50%, var(--navy-dark) 100%);
+      padding: 32px 16px
+    }
+
+    .auth-wrapper .logo {
+      text-align: center;
+      margin-bottom: 32px;
+      color: var(--white)
+    }
+
+    .auth-wrapper .logo h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px
+    }
+
+    .auth-wrapper .logo p {
+      font-size: 14px;
+      color: var(--gray-400);
+      margin-top: 6px
+    }
+
+    .auth-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: var(--shadow-lg)
+    }
+
+    .auth-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px;
+      text-align: center
+    }
+
+    /* School cards grid on landing */
+    .schools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 24px
+    }
+
+    .school-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: var(--transition);
+      border: 2px solid transparent
+    }
+
+    .school-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--accent)
+    }
+
+    .school-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px
+    }
+
+    .school-card p {
+      font-size: 13px;
+      color: var(--gray-500)
+    }
+
+    .school-card .school-admin {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--gray-200);
+      font-size: 12px;
+      color: var(--gray-400)
+    }
+
+    /* ---- APP LAYOUT ---- */
+    .app-layout {
+      display: flex;
+      min-height: 100vh
+    }
+
+    .sidebar {
+      width: 260px;
+      background: var(--navy);
+      color: var(--white);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+      transition: transform .3s ease
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, .1)
+    }
+
+    .sidebar-header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.5px
+    }
+
+    .sidebar-header .school-name {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 4px;
+      font-weight: 600
+    }
+
+    .sidebar-header .admin-name {
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 2px
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      color: var(--gray-300);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: var(--transition);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left
+    }
+
+    .nav-link:hover {
+      background: var(--navy-light);
+      color: var(--white)
+    }
+
+    .nav-link.active {
+      background: var(--accent);
+      color: var(--white)
+    }
+
+    .nav-link svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid rgba(255, 255, 255, .1)
+    }
+
+    .btn-logout {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px;
+      border-radius: var(--radius);
+      background: rgba(239, 68, 68, .15);
+      color: #fca5a5;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, .3);
+      color: var(--white)
+    }
+
+    .main {
+      margin-left: 260px;
+      flex: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    .topbar {
+      background: var(--white);
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50
+    }
+
+    .topbar h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy)
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--navy);
+      padding: 8px
+    }
+
+    .content {
+      padding: 32px;
+      flex: 1
+    }
+
+    /* Cards */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 24px;
+      transition: var(--transition)
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md)
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px
+    }
+
+    .card-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--navy)
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+      font-family: inherit
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--white)
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover)
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: var(--white)
+    }
+
+    .btn-success:hover {
+      opacity: .9
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: var(--white)
+    }
+
+    .btn-danger:hover {
+      opacity: .9
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--gray-300);
+      color: var(--gray-600)
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px
+    }
+
+    .btn-lg {
+      padding: 12px 24px;
+      font-size: 15px
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th,
+    td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+      font-size: 13px
+    }
+
+    th {
+      background: var(--gray-50);
+      font-weight: 600;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: .5px
+    }
+
+    tr:hover td {
+      background: var(--gray-50)
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 16px
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 6px
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-300);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-family: inherit;
+      transition: var(--transition);
+      background: var(--white)
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, .15)
+    }
+
+    select.form-control {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all
+    }
+
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      transform: scale(.95);
+      transition: transform .2s
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1)
+    }
+
+    .modal h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px
+    }
+
+    /* Timetable */
+    .timetable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    .timetable th,
+    .timetable td {
+      border: 1px solid var(--gray-200);
+      padding: 8px;
+      text-align: center;
+      min-width: 120px
+    }
+
+    .timetable th {
+      background: var(--navy);
+      color: var(--white);
+      font-size: 11px
+    }
+
+    .timetable td {
+      background: var(--white);
+      vertical-align: top;
+      height: 60px;
+      cursor: pointer;
+      transition: var(--transition)
+    }
+
+    .timetable td:hover {
+      background: var(--gray-50)
+    }
+
+    .timetable td.conflict {
+      background: var(--danger-bg);
+      border-color: var(--danger)
+    }
+
+    .timetable .slot-label {
+      background: var(--gray-50);
+      font-weight: 600;
+      color: var(--gray-600);
+      cursor: default;
+      min-width: 80px
+    }
+
+    .cell-content {
+      font-size: 11px;
+      line-height: 1.4
+    }
+
+    .cell-content .disc {
+      font-weight: 600;
+      color: var(--navy)
+    }
+
+    .cell-content .prof {
+      color: var(--gray-500)
+    }
+
+    /* Availability Grid */
+    .avail-grid {
+      border-collapse: collapse
+    }
+
+    .avail-grid th,
+    .avail-grid td {
+      border: 1px solid var(--gray-200);
+      padding: 8px 12px;
+      text-align: center;
+      font-size: 13px
+    }
+
+    .avail-grid th {
+      background: var(--navy);
+      color: var(--white)
+    }
+
+    .avail-grid input[type=checkbox] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--accent)
+    }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px
+    }
+
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 16px
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px
+    }
+
+    .stat-icon.blue {
+      background: #dbeafe;
+      color: var(--accent)
+    }
+
+    .stat-icon.green {
+      background: #dcfce7;
+      color: var(--success)
+    }
+
+    .stat-icon.orange {
+      background: #fef3c7;
+      color: var(--warning)
+    }
+
+    .stat-icon.red {
+      background: #fee2e2;
+      color: var(--danger)
+    }
+
+    .stat-info h4 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--navy)
+    }
+
+    .stat-info p {
+      font-size: 12px;
+      color: var(--gray-500)
+    }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px
+    }
+
+    .filter-bar select {
+      max-width: 250px
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .toast {
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn .3s ease
+    }
+
+    .toast.success {
+      background: var(--success)
+    }
+
+    .toast.error {
+      background: var(--danger)
+    }
+
+    .toast.warning {
+      background: var(--warning)
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1
+      }
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600
+    }
+
+    .badge-blue {
+      background: #dbeafe;
+      color: #1d4ed8
+    }
+
+    .badge-green {
+      background: #dcfce7;
+      color: #15803d
+    }
+
+    .badge-orange {
+      background: #fef3c7;
+      color: #b45309
+    }
+
+    .badge-purple {
+      background: #f3e8ff;
+      color: #7c3aed
+    }
+
+    /* Multi-select */
+    .checkbox-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 8px
+    }
+
+    .checkbox-list label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 4px
+    }
+
+    .checkbox-list label:hover {
+      background: var(--gray-50)
+    }
+
+    /* Divider */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--gray-400);
+      font-size: 12px
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gray-200)
+    }
+
+    /* Responsive */
+    @media(max-width:768px) {
+      .sidebar {
+        transform: translateX(-100%)
+      }
+
+      .sidebar.open {
+        transform: translateX(0)
+      }
+
+      .main {
+        margin-left: 0
+      }
+
+      .menu-toggle {
+        display: block
+      }
+
+      .content {
+        padding: 16px
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .timetable {
+        font-size: 10px
+      }
+
+      .timetable th,
+      .timetable td {
+        padding: 4px;
+        min-width: 80px
+      }
+
+      .schools-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media(max-width:480px) {
+      .stats-grid {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- Sidebar Navigation -->
-<aside class="sidebar" id="sidebar">
-<div class="sidebar-header">
-<h1>📚 Horários Escolares</h1>
-<p>Sistema de Gestão</p>
-</div>
-<nav class="sidebar-nav">
-<button class="nav-link active" data-view="dashboard">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-Dashboard
-</button>
-<button class="nav-link" data-view="disciplinas">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-Disciplinas
-</button>
-<button class="nav-link" data-view="turmas">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-Turmas
-</button>
-<button class="nav-link" data-view="professores">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-Professores
-</button>
-<button class="nav-link" data-view="disponibilidade">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-Disponibilidade
-</button>
-<button class="nav-link" data-view="gerar">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-Gerar Grade
-</button>
-</nav>
-</aside>
+  <!-- Root container – everything rendered here -->
+  <div id="root"></div>
 
-<!-- Main Content -->
-<div class="main">
-<header class="topbar">
-<button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-</button>
-<h2 id="page-title">Dashboard</h2>
-<div style="font-size:12px;color:var(--gray-500)" id="clock"></div>
-</header>
-<main class="content" id="app"></main>
-</div>
+  <!-- Modal Container -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-content"></div>
+  </div>
 
-<!-- Modal Container -->
-<div class="modal-overlay" id="modal-overlay">
-<div class="modal" id="modal-content"></div>
-</div>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
 
-<!-- Toast Container -->
-<div class="toast-container" id="toast-container"></div>
+  <script>
+    /* ============================================================
+       GLOBAL DATA – Schools registry (shared across all tenants)
+       ============================================================ */
+    function getSchools() { try { return JSON.parse(localStorage.getItem('hs_schools')) || [] } catch { return [] } }
+    function setSchools(v) { localStorage.setItem('hs_schools', JSON.stringify(v)) }
+    function getSession() { try { return JSON.parse(sessionStorage.getItem('hs_session')) } catch { return null } }
+    function setSession(v) { sessionStorage.setItem('hs_session', JSON.stringify(v)) }
+    function clearSession() { sessionStorage.removeItem('hs_session') }
+    function nextId(list) { return list.length ? Math.max(...list.map(i => i.id)) + 1 : 1 }
 
-<script>
-/* ============================================================
-   DATA LAYER – localStorage persistence
-   ============================================================ */
-const DB = {
-  _get(k){ try{ return JSON.parse(localStorage.getItem(k)) || [] }catch{ return [] } },
-  _set(k,v){ localStorage.setItem(k, JSON.stringify(v)) },
-  get disciplinas(){ return this._get('hs_disciplinas') },
-  set disciplinas(v){ this._set('hs_disciplinas',v) },
-  get turmas(){ return this._get('hs_turmas') },
-  set turmas(v){ this._set('hs_turmas',v) },
-  get professores(){ return this._get('hs_professores') },
-  set professores(v){ this._set('hs_professores',v) },
-  get grades(){ return this._get('hs_grades') },
-  set grades(v){ this._set('hs_grades',v) },
-  nextId(list){ return list.length ? Math.max(...list.map(i=>i.id))+1 : 1 }
-};
+    /* ============================================================
+       TENANT-SCOPED DATA LAYER
+       ============================================================ */
+    const DB = {
+      _sid() { return getSession()?.schoolId },
+      _key(k) { return `hs_${this._sid()}_${k}` },
+      _get(k) { try { return JSON.parse(localStorage.getItem(this._key(k))) || [] } catch { return [] } },
+      _set(k, v) { localStorage.setItem(this._key(k), JSON.stringify(v)) },
+      get disciplinas() { return this._get('disciplinas') },
+      set disciplinas(v) { this._set('disciplinas', v) },
+      get turmas() { return this._get('turmas') },
+      set turmas(v) { this._set('turmas', v) },
+      get professores() { return this._get('professores') },
+      set professores(v) { this._set('professores', v) },
+      get grades() { return this._get('grades') },
+      set grades(v) { this._set('grades', v) },
+      nextId(list) { return nextId(list) }
+    };
 
-const PERIODOS = {
-  matutino:{label:'Matutino',aulas:5},
-  vespertino:{label:'Vespertino',aulas:5},
-  noturno:{label:'Noturno',aulas:4},
-  integral:{label:'Integral',aulas:9}
-};
-const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta'];
-const HORARIOS_LABEL = ['1º','2º','3º','4º','5º','6º','7º','8º','9º'];
+    const PERIODOS = { matutino: { label: 'Matutino', aulas: 5 }, vespertino: { label: 'Vespertino', aulas: 5 }, noturno: { label: 'Noturno', aulas: 4 }, integral: { label: 'Integral', aulas: 9 } };
+    const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+    const HORARIOS_LABEL = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º', '9º'];
 
-/* ============================================================
-   UTILITIES
-   ============================================================ */
-function uid(){ return Date.now()+Math.random().toString(36).slice(2,7) }
+    /* ============================================================
+       UTILITIES
+       ============================================================ */
+    function toast(msg, type = 'success') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg; c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+    function openModal(html) {
+      const o = document.getElementById('modal-overlay'), m = document.getElementById('modal-content');
+      m.innerHTML = html; o.classList.add('active');
+    }
+    function closeModal() { document.getElementById('modal-overlay').classList.remove('active') }
+    document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target.id === 'modal-overlay') closeModal() });
 
-function toast(msg,type='success'){
-  const c=document.getElementById('toast-container');
-  const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;c.appendChild(t);
-  setTimeout(()=>t.remove(),3000);
-}
+    /* ============================================================
+       AUTH VIEWS: LANDING / REGISTER / LOGIN
+       ============================================================ */
+    function renderLanding() {
+      const schools = getSchools();
+      const root = document.getElementById('root');
+      let html = `<div class="auth-wrapper"><div class="logo"><h1>📚 Horários Escolares</h1><p>Sistema Multi-Escolar de Gestão de Horários</p></div>`;
+      if (schools.length) {
+        html += `<h2 style="color:var(--white);margin-bottom:20px;font-size:18px">Selecione sua Escola</h2><div class="schools-grid">`;
+        schools.forEach(s => {
+          html += `<div class="school-card" onclick="showLogin(${s.id})">
+        <h3>🏫 ${esc(s.nome)}</h3><p>${esc(s.cidade || '')}</p>
+        <div class="school-admin">👤 Admin: ${esc(s.adminNome)}</div></div>`;
+        });
+        html += `</div>`;
+      } else {
+        html += `<p style="color:var(--gray-400);margin-bottom:24px;font-size:14px">Nenhuma escola cadastrada. Comece cadastrando sua escola!</p>`;
+      }
+      html += `<button class="btn btn-primary btn-lg" onclick="showRegister()" style="margin-top:8px">+ Cadastrar Nova Escola</button></div>`;
+      root.innerHTML = html;
+    }
 
-function openModal(html){
-  const o=document.getElementById('modal-overlay'),m=document.getElementById('modal-content');
-  m.innerHTML=html;o.classList.add('active');
-}
-function closeModal(){ document.getElementById('modal-overlay').classList.remove('active') }
-document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target.id==='modal-overlay') closeModal() });
+    function esc(s) { return s ? s.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : '' }
 
-/* ============================================================
-   SPA ROUTER
-   ============================================================ */
-const views = {dashboard:renderDashboard,disciplinas:renderDisciplinas,turmas:renderTurmas,professores:renderProfessores,disponibilidade:renderDisponibilidade,gerar:renderGerar};
-const viewTitles = {dashboard:'Dashboard',disciplinas:'Disciplinas',turmas:'Turmas',professores:'Professores',disponibilidade:'Disponibilidade',gerar:'Gerar Grade'};
+    function showRegister() {
+      const root = document.getElementById('root');
+      root.innerHTML = `<div class="auth-wrapper"><div class="logo"><h1>📚 Horários Escolares</h1><p>Cadastro de Nova Escola</p></div>
+    <div class="auth-card"><h2>Cadastrar Escola</h2>
+    <div class="form-group"><label>Nome da Escola</label><input class="form-control" id="reg-escola" placeholder="Ex: Escola Municipal José de Alencar"></div>
+    <div class="form-group"><label>Cidade / UF</label><input class="form-control" id="reg-cidade" placeholder="Ex: São Paulo - SP"></div>
+    <div class="auth-divider">Dados do Administrador</div>
+    <div class="form-group"><label>Nome do Responsável</label><input class="form-control" id="reg-admin" placeholder="Nome completo"></div>
+    <div class="form-group"><label>E-mail</label><input type="email" class="form-control" id="reg-email" placeholder="admin@escola.com"></div>
+    <div class="form-group"><label>Senha</label><input type="password" class="form-control" id="reg-senha" placeholder="Mínimo 4 caracteres"></div>
+    <div class="form-group"><label>Confirmar Senha</label><input type="password" class="form-control" id="reg-senha2" placeholder="Repita a senha"></div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-outline" onclick="renderLanding()">← Voltar</button>
+      <button class="btn btn-primary" onclick="doRegister()">Cadastrar Escola</button>
+    </div></div></div>`;
+    }
 
-function navigate(view){
-  if(!views[view]) view='dashboard';
-  location.hash=view;
-  document.getElementById('page-title').textContent=viewTitles[view];
-  document.querySelectorAll('.nav-link').forEach(l=>{l.classList.toggle('active',l.dataset.view===view)});
-  views[view]();
-  document.getElementById('sidebar').classList.remove('open');
-}
-document.querySelectorAll('.nav-link').forEach(l=>l.addEventListener('click',()=>navigate(l.dataset.view)));
-window.addEventListener('hashchange',()=>navigate(location.hash.slice(1)));
+    function doRegister() {
+      const nome = document.getElementById('reg-escola').value.trim();
+      const cidade = document.getElementById('reg-cidade').value.trim();
+      const adminNome = document.getElementById('reg-admin').value.trim();
+      const email = document.getElementById('reg-email').value.trim().toLowerCase();
+      const senha = document.getElementById('reg-senha').value;
+      const senha2 = document.getElementById('reg-senha2').value;
+      if (!nome || !adminNome || !email || !senha) { toast('Preencha todos os campos obrigatórios', 'error'); return }
+      if (senha.length < 4) { toast('Senha deve ter pelo menos 4 caracteres', 'error'); return }
+      if (senha !== senha2) { toast('As senhas não coincidem', 'error'); return }
+      let schools = getSchools();
+      if (schools.find(s => s.adminEmail === email)) { toast('E-mail já cadastrado em outra escola', 'error'); return }
+      const id = nextId(schools);
+      schools.push({ id, nome, cidade, adminNome, adminEmail: email, senha });
+      setSchools(schools);
+      toast('Escola cadastrada com sucesso!');
+      showLogin(id);
+    }
 
-/* Clock */
-setInterval(()=>{const d=new Date();document.getElementById('clock').textContent=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR')},1000);
+    function showLogin(schoolId) {
+      const school = getSchools().find(s => s.id === schoolId);
+      if (!school) { renderLanding(); return }
+      const root = document.getElementById('root');
+      root.innerHTML = `<div class="auth-wrapper"><div class="logo"><h1>📚 Horários Escolares</h1><p>Login</p></div>
+    <div class="auth-card">
+    <div style="text-align:center;margin-bottom:20px"><h2 style="margin-bottom:4px">🏫 ${esc(school.nome)}</h2><p style="font-size:13px;color:var(--gray-500)">${esc(school.cidade)}</p></div>
+    <div class="form-group"><label>E-mail</label><input type="email" class="form-control" id="login-email" placeholder="admin@escola.com" value="${esc(school.adminEmail)}"></div>
+    <div class="form-group"><label>Senha</label><input type="password" class="form-control" id="login-senha" placeholder="Sua senha"
+      onkeydown="if(event.key==='Enter')doLogin(${schoolId})"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="doLogin(${schoolId})">Entrar</button>
+    <div class="modal-actions" style="justify-content:center;margin-top:16px">
+      <button class="btn btn-outline btn-sm" onclick="renderLanding()">← Voltar para Escolas</button>
+    </div></div></div>`;
+      document.getElementById('login-senha').focus();
+    }
 
-/* ============================================================
-   VIEW: DASHBOARD
-   ============================================================ */
-function renderDashboard(){
-  const disc=DB.disciplinas,turm=DB.turmas,prof=DB.professores,grades=DB.grades;
-  const app=document.getElementById('app');
-  let html=`<div class="stats-grid">
+    function doLogin(schoolId) {
+      const school = getSchools().find(s => s.id === schoolId);
+      const email = document.getElementById('login-email').value.trim().toLowerCase();
+      const senha = document.getElementById('login-senha').value;
+      if (email !== school.adminEmail || senha !== school.senha) { toast('E-mail ou senha incorretos', 'error'); return }
+      setSession({ schoolId: school.id, schoolNome: school.nome, adminNome: school.adminNome });
+      toast(`Bem-vindo, ${school.adminNome}!`);
+      initApp();
+    }
+
+    function doLogout() {
+      clearSession();
+      location.hash = '';
+      renderLanding();
+    }
+
+    /* ============================================================
+       MAIN APP – Renders sidebar + app shell
+       ============================================================ */
+    function initApp() {
+      const session = getSession();
+      if (!session) { renderLanding(); return }
+      const root = document.getElementById('root');
+      root.innerHTML = `<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1>📚 Horários Escolares</h1>
+      <div class="school-name">🏫 ${esc(session.schoolNome)}</div>
+      <div class="admin-name">👤 ${esc(session.adminNome)}</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-link active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+      <button class="nav-link" data-view="disciplinas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Disciplinas</button>
+      <button class="nav-link" data-view="turmas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Turmas</button>
+      <button class="nav-link" data-view="professores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Professores</button>
+      <button class="nav-link" data-view="disponibilidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Disponibilidade</button>
+      <button class="nav-link" data-view="gerar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Gerar Grade</button>
+    </nav>
+    <div class="sidebar-footer"><button class="btn-logout" onclick="doLogout()">⬅ Sair / Trocar Escola</button></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <h2 id="page-title">Dashboard</h2>
+      <div style="font-size:12px;color:var(--gray-500)" id="clock"></div>
+    </header>
+    <main class="content" id="app"></main>
+  </div></div>`;
+      // Bind nav
+      document.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', () => navigate(l.dataset.view)));
+      // Clock
+      setInterval(() => { const d = new Date(); const cl = document.getElementById('clock'); if (cl) cl.textContent = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR') }, 1000);
+      navigate(location.hash.slice(1) || 'dashboard');
+    }
+
+    /* ============================================================
+       SPA ROUTER (inside app)
+       ============================================================ */
+    const appViews = { dashboard: renderDashboard, disciplinas: renderDisciplinas, turmas: renderTurmas, professores: renderProfessores, disponibilidade: renderDisponibilidade, gerar: renderGerar };
+    const viewTitles = { dashboard: 'Dashboard', disciplinas: 'Disciplinas', turmas: 'Turmas', professores: 'Professores', disponibilidade: 'Disponibilidade', gerar: 'Gerar Grade' };
+
+    function navigate(view) {
+      if (!getSession()) { renderLanding(); return }
+      if (!appViews[view]) view = 'dashboard';
+      location.hash = view;
+      const pt = document.getElementById('page-title'); if (pt) pt.textContent = viewTitles[view];
+      document.querySelectorAll('.nav-link').forEach(l => { l.classList.toggle('active', l.dataset.view === view) });
+      appViews[view]();
+      const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('open');
+    }
+    window.addEventListener('hashchange', () => { if (getSession()) navigate(location.hash.slice(1)) });
+
+    /* ============================================================
+       VIEW: DASHBOARD
+       ============================================================ */
+    function renderDashboard() {
+      const disc = DB.disciplinas, turm = DB.turmas, prof = DB.professores, grades = DB.grades;
+      const app = document.getElementById('app');
+      let html = `<div class="stats-grid">
     <div class="stat-card"><div class="stat-icon blue">📖</div><div class="stat-info"><h4>${disc.length}</h4><p>Disciplinas</p></div></div>
     <div class="stat-card"><div class="stat-icon green">🎓</div><div class="stat-info"><h4>${turm.length}</h4><p>Turmas</p></div></div>
     <div class="stat-card"><div class="stat-icon orange">👨‍🏫</div><div class="stat-info"><h4>${prof.length}</h4><p>Professores</p></div></div>
     <div class="stat-card"><div class="stat-icon red">📋</div><div class="stat-info"><h4>${grades.length}</h4><p>Grades Geradas</p></div></div>
   </div>`;
-
-  // Filter bar
-  html+=`<div class="card"><div class="card-header"><h3>Visualização de Horários</h3></div>
-    <div class="filter-bar">
-      <select class="form-control" id="dash-filter-type" onchange="dashFilterChanged()">
-        <option value="turma">Filtrar por Turma</option><option value="professor">Filtrar por Professor</option>
-      </select>
-      <select class="form-control" id="dash-filter-value" onchange="dashRenderTable()"></select>
-    </div>
-    <div style="overflow-x:auto" id="dash-table-container"></div>
-  </div>`;
-  app.innerHTML=html;
-  dashFilterChanged();
-}
-
-function dashFilterChanged(){
-  const type=document.getElementById('dash-filter-type').value;
-  const sel=document.getElementById('dash-filter-value');
-  sel.innerHTML='';
-  if(type==='turma'){
-    DB.turmas.forEach(t=>{sel.innerHTML+=`<option value="${t.id}">${t.serie} - ${t.nome} (${PERIODOS[t.periodo].label})</option>`});
-  } else {
-    DB.professores.forEach(p=>{sel.innerHTML+=`<option value="${p.id}">${p.nome}</option>`});
-  }
-  dashRenderTable();
-}
-
-function dashRenderTable(){
-  const container=document.getElementById('dash-table-container');
-  const type=document.getElementById('dash-filter-type').value;
-  const val=parseInt(document.getElementById('dash-filter-value').value);
-  const grades=DB.grades;
-  if(!val){container.innerHTML='<p style="color:var(--gray-500);padding:20px">Nenhum dado disponível.</p>';return}
-
-  if(type==='turma'){
-    const turma=DB.turmas.find(t=>t.id===val);
-    if(!turma){container.innerHTML='<p style="color:var(--gray-500)">Turma não encontrada.</p>';return}
-    const grade=grades.find(g=>g.turmaId===val);
-    const numAulas=PERIODOS[turma.periodo].aulas;
-    let t=`<table class="timetable"><tr><th>Horário</th>`;
-    DIAS.forEach(d=>t+=`<th>${d}</th>`);t+=`</tr>`;
-    for(let h=0;h<numAulas;h++){
-      t+=`<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula</td>`;
-      for(let d=0;d<5;d++){
-        const slot=grade?.slots?.find(s=>s.dia===d&&s.horario===h);
-        if(slot){
-          const disc=DB.disciplinas.find(x=>x.id===slot.disciplinaId);
-          const prof=DB.professores.find(x=>x.id===slot.professorId);
-          t+=`<td><div class="cell-content"><div class="disc">${disc?.nome||'?'}</div><div class="prof">${prof?.nome||'?'}</div></div></td>`;
-        } else t+=`<td></td>`;
-      }
-      t+=`</tr>`;
+      html += `<div class="card"><div class="card-header"><h3>Visualização de Horários</h3></div>
+    <div class="filter-bar"><select class="form-control" id="dash-filter-type" onchange="dashFilterChanged()">
+      <option value="turma">Filtrar por Turma</option><option value="professor">Filtrar por Professor</option>
+    </select><select class="form-control" id="dash-filter-value" onchange="dashRenderTable()"></select></div>
+    <div style="overflow-x:auto" id="dash-table-container"></div></div>`;
+      app.innerHTML = html; dashFilterChanged();
     }
-    t+=`</table>`;container.innerHTML=t;
-  } else {
-    // Professor view: show all slots for this professor across all turmas
-    const prof=DB.professores.find(p=>p.id===val);
-    if(!prof){container.innerHTML='<p style="color:var(--gray-500)">Professor não encontrado.</p>';return}
-    let t=`<table class="timetable"><tr><th>Horário</th>`;
-    DIAS.forEach(d=>t+=`<th>${d}</th>`);t+=`</tr>`;
-    for(let h=0;h<9;h++){
-      t+=`<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula</td>`;
-      for(let d=0;d<5;d++){
-        let found=[];
-        grades.forEach(g=>{
-          const slot=g.slots?.find(s=>s.dia===d&&s.horario===h&&s.professorId===val);
-          if(slot){
-            const turma=DB.turmas.find(x=>x.id===g.turmaId);
-            const disc=DB.disciplinas.find(x=>x.id===slot.disciplinaId);
-            found.push({turma,disc});
-          }
-        });
-        const conflict=found.length>1;
-        if(found.length){
-          t+=`<td class="${conflict?'conflict':''}"><div class="cell-content">${found.map(f=>`<div class="disc">${f.disc?.nome||'?'}</div><div class="prof">${f.turma?.nome||'?'}</div>`).join('<hr style="margin:4px 0">')}</div></td>`;
-        } else t+=`<td></td>`;
-      }
-      t+=`</tr>`;
-    }
-    t+=`</table>`;container.innerHTML=t;
-  }
-}
 
-/* ============================================================
-   VIEW: DISCIPLINAS (Subjects CRUD)
-   ============================================================ */
-function renderDisciplinas(){
-  const list=DB.disciplinas;
-  let html=`<div class="card"><div class="card-header"><h3>Disciplinas Cadastradas</h3>
+    function dashFilterChanged() {
+      const type = document.getElementById('dash-filter-type').value;
+      const sel = document.getElementById('dash-filter-value'); sel.innerHTML = '';
+      if (type === 'turma') DB.turmas.forEach(t => { sel.innerHTML += `<option value="${t.id}">${t.serie} - ${t.nome} (${PERIODOS[t.periodo].label})</option>` });
+      else DB.professores.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.nome}</option>` });
+      dashRenderTable();
+    }
+
+    function dashRenderTable() {
+      const container = document.getElementById('dash-table-container');
+      const type = document.getElementById('dash-filter-type').value;
+      const val = parseInt(document.getElementById('dash-filter-value').value);
+      const grades = DB.grades;
+      if (!val) { container.innerHTML = '<p style="color:var(--gray-500);padding:20px">Nenhum dado disponível.</p>'; return }
+      if (type === 'turma') {
+        const turma = DB.turmas.find(t => t.id === val); if (!turma) { container.innerHTML = ''; return }
+        const grade = grades.find(g => g.turmaId === val); const numAulas = PERIODOS[turma.periodo].aulas;
+        let t = `<table class="timetable"><tr><th>Horário</th>`; DIAS.forEach(d => t += `<th>${d}</th>`); t += `</tr>`;
+        for (let h = 0; h < numAulas; h++) {
+          t += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula</td>`;
+          for (let d = 0; d < 5; d++) {
+            const slot = grade?.slots?.find(s => s.dia === d && s.horario === h);
+            if (slot) {
+              const disc = DB.disciplinas.find(x => x.id === slot.disciplinaId); const prof = DB.professores.find(x => x.id === slot.professorId);
+              t += `<td><div class="cell-content"><div class="disc">${disc?.nome || '?'}</div><div class="prof">${prof?.nome || '?'}</div></div></td>`
+            }
+            else t += `<td></td>`
+          } t += `</tr>`
+        }
+        t += `</table>`; container.innerHTML = t;
+      } else {
+        const prof = DB.professores.find(p => p.id === val); if (!prof) { container.innerHTML = ''; return }
+        let t = `<table class="timetable"><tr><th>Horário</th>`; DIAS.forEach(d => t += `<th>${d}</th>`); t += `</tr>`;
+        for (let h = 0; h < 9; h++) {
+          t += `<tr><td class="slot-label">${HORARIOS_LABEL[h]} Aula</td>`;
+          for (let d = 0; d < 5; d++) {
+            let found = [];
+            grades.forEach(g => {
+              const slot = g.slots?.find(s => s.dia === d && s.horario === h && s.professorId === val);
+              if (slot) { found.push({ turma: DB.turmas.find(x => x.id === g.turmaId), disc: DB.disciplinas.find(x => x.id === slot.disciplinaId) }) }
+            });
+            const conflict = found.length > 1;
+            if (found.length) t += `<td class="${conflict ? 'conflict' : ''}"><div class="cell-content">${found.map(f => `<div class="disc">${f.disc?.nome || '?'}</div><div class="prof">${f.turma?.nome || '?'}</div>`).join('<hr style="margin:4px 0">')}</div></td>`;
+            else t += `<td></td>`
+          } t += `</tr>`
+        }
+        t += `</table>`; container.innerHTML = t;
+      }
+    }
+
+    /* ============================================================
+       VIEW: DISCIPLINAS
+       ============================================================ */
+    function renderDisciplinas() {
+      const list = DB.disciplinas;
+      let html = `<div class="card"><div class="card-header"><h3>Disciplinas Cadastradas</h3>
     <button class="btn btn-primary" onclick="editDisciplina()">+ Nova Disciplina</button></div>`;
-  if(!list.length) html+=`<p style="color:var(--gray-500)">Nenhuma disciplina cadastrada.</p>`;
-  else{
-    html+=`<table><thead><tr><th>ID</th><th>Nome</th><th>Carga Horária/Semana</th><th>Ações</th></tr></thead><tbody>`;
-    list.forEach(d=>{
-      html+=`<tr><td>${d.id}</td><td>${d.nome}</td><td>${d.cargaHoraria}h</td>
-        <td><button class="btn btn-outline btn-sm" onclick="editDisciplina(${d.id})">Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteDisciplina(${d.id})">Excluir</button></td></tr>`;
-    });
-    html+=`</tbody></table>`;
-  }
-  html+=`</div>`;document.getElementById('app').innerHTML=html;
-}
-
-function editDisciplina(id){
-  const d=id?DB.disciplinas.find(x=>x.id===id):null;
-  openModal(`<h3>${d?'Editar':'Nova'} Disciplina</h3>
-    <div class="form-group"><label>Nome</label><input class="form-control" id="disc-nome" value="${d?.nome||''}"></div>
-    <div class="form-group"><label>Carga Horária Semanal</label><input type="number" class="form-control" id="disc-ch" min="1" max="20" value="${d?.cargaHoraria||2}"></div>
+      if (!list.length) html += `<p style="color:var(--gray-500)">Nenhuma disciplina cadastrada.</p>`;
+      else {
+        html += `<table><thead><tr><th>ID</th><th>Nome</th><th>Carga Horária/Semana</th><th>Ações</th></tr></thead><tbody>`;
+        list.forEach(d => {
+          html += `<tr><td>${d.id}</td><td>${d.nome}</td><td>${d.cargaHoraria}h</td>
+      <td><button class="btn btn-outline btn-sm" onclick="editDisciplina(${d.id})">Editar</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDisciplina(${d.id})">Excluir</button></td></tr>`
+        });
+        html += `</tbody></table>`
+      }
+      html += `</div>`; document.getElementById('app').innerHTML = html;
+    }
+    function editDisciplina(id) {
+      const d = id ? DB.disciplinas.find(x => x.id === id) : null;
+      openModal(`<h3>${d ? 'Editar' : 'Nova'} Disciplina</h3>
+    <div class="form-group"><label>Nome</label><input class="form-control" id="disc-nome" value="${d?.nome || ''}"></div>
+    <div class="form-group"><label>Carga Horária Semanal</label><input type="number" class="form-control" id="disc-ch" min="1" max="20" value="${d?.cargaHoraria || 2}"></div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveDisciplina(${id||0})">Salvar</button></div>`);
-}
+    <button class="btn btn-primary" onclick="saveDisciplina(${id || 0})">Salvar</button></div>`);
+    }
+    function saveDisciplina(id) {
+      const nome = document.getElementById('disc-nome').value.trim(); const ch = parseInt(document.getElementById('disc-ch').value);
+      if (!nome) { toast('Nome é obrigatório', 'error'); return } let list = DB.disciplinas;
+      if (id) { const i = list.findIndex(x => x.id === id); list[i] = { ...list[i], nome, cargaHoraria: ch } }
+      else list.push({ id: DB.nextId(list), nome, cargaHoraria: ch });
+      DB.disciplinas = list; closeModal(); toast('Disciplina salva!'); renderDisciplinas();
+    }
+    function deleteDisciplina(id) { if (!confirm('Excluir esta disciplina?')) return; DB.disciplinas = DB.disciplinas.filter(x => x.id !== id); toast('Disciplina excluída!'); renderDisciplinas() }
 
-function saveDisciplina(id){
-  const nome=document.getElementById('disc-nome').value.trim();
-  const ch=parseInt(document.getElementById('disc-ch').value);
-  if(!nome){toast('Nome é obrigatório','error');return}
-  let list=DB.disciplinas;
-  if(id){const i=list.findIndex(x=>x.id===id);list[i]={...list[i],nome,cargaHoraria:ch}}
-  else list.push({id:DB.nextId(list),nome,cargaHoraria:ch});
-  DB.disciplinas=list;closeModal();toast('Disciplina salva!');renderDisciplinas();
-}
-
-function deleteDisciplina(id){
-  if(!confirm('Excluir esta disciplina?'))return;
-  DB.disciplinas=DB.disciplinas.filter(x=>x.id!==id);toast('Disciplina excluída!');renderDisciplinas();
-}
-
-/* ============================================================
-   VIEW: TURMAS (Classes CRUD)
-   ============================================================ */
-function renderTurmas(){
-  const list=DB.turmas;
-  let html=`<div class="card"><div class="card-header"><h3>Turmas Cadastradas</h3>
+    /* ============================================================
+       VIEW: TURMAS
+       ============================================================ */
+    function renderTurmas() {
+      const list = DB.turmas;
+      let html = `<div class="card"><div class="card-header"><h3>Turmas Cadastradas</h3>
     <button class="btn btn-primary" onclick="editTurma()">+ Nova Turma</button></div>`;
-  if(!list.length) html+=`<p style="color:var(--gray-500)">Nenhuma turma cadastrada.</p>`;
-  else{
-    html+=`<table><thead><tr><th>ID</th><th>Série</th><th>Nome</th><th>Período</th><th>Aulas/Dia</th><th>Ações</th></tr></thead><tbody>`;
-    list.forEach(t=>{
-      const p=PERIODOS[t.periodo];
-      const bc=t.periodo==='matutino'?'blue':t.periodo==='vespertino'?'green':t.periodo==='noturno'?'purple':'orange';
-      html+=`<tr><td>${t.id}</td><td>${t.serie}</td><td>${t.nome}</td>
-        <td><span class="badge badge-${bc}">${p.label}</span></td><td>${p.aulas}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="editTurma(${t.id})">Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteTurma(${t.id})">Excluir</button></td></tr>`;
-    });
-    html+=`</tbody></table>`;
-  }
-  html+=`</div>`;document.getElementById('app').innerHTML=html;
-}
-
-function editTurma(id){
-  const t=id?DB.turmas.find(x=>x.id===id):null;
-  let opts=Object.entries(PERIODOS).map(([k,v])=>`<option value="${k}" ${t?.periodo===k?'selected':''}>${v.label} (${v.aulas} aulas)</option>`).join('');
-  openModal(`<h3>${t?'Editar':'Nova'} Turma</h3>
-    <div class="form-group"><label>Série</label><input class="form-control" id="turma-serie" value="${t?.serie||''}" placeholder="Ex: 1º Ano"></div>
-    <div class="form-group"><label>Nome</label><input class="form-control" id="turma-nome" value="${t?.nome||''}" placeholder="Ex: Turma A"></div>
+      if (!list.length) html += `<p style="color:var(--gray-500)">Nenhuma turma cadastrada.</p>`;
+      else {
+        html += `<table><thead><tr><th>ID</th><th>Série</th><th>Nome</th><th>Período</th><th>Aulas/Dia</th><th>Ações</th></tr></thead><tbody>`;
+        list.forEach(t => {
+          const p = PERIODOS[t.periodo]; const bc = t.periodo === 'matutino' ? 'blue' : t.periodo === 'vespertino' ? 'green' : t.periodo === 'noturno' ? 'purple' : 'orange';
+          html += `<tr><td>${t.id}</td><td>${t.serie}</td><td>${t.nome}</td><td><span class="badge badge-${bc}">${p.label}</span></td><td>${p.aulas}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="editTurma(${t.id})">Editar</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteTurma(${t.id})">Excluir</button></td></tr>`
+        });
+        html += `</tbody></table>`
+      }
+      html += `</div>`; document.getElementById('app').innerHTML = html;
+    }
+    function editTurma(id) {
+      const t = id ? DB.turmas.find(x => x.id === id) : null;
+      let opts = Object.entries(PERIODOS).map(([k, v]) => `<option value="${k}" ${t?.periodo === k ? 'selected' : ''}>${v.label} (${v.aulas} aulas)</option>`).join('');
+      openModal(`<h3>${t ? 'Editar' : 'Nova'} Turma</h3>
+    <div class="form-group"><label>Série</label><input class="form-control" id="turma-serie" value="${t?.serie || ''}" placeholder="Ex: 1º Ano"></div>
+    <div class="form-group"><label>Nome</label><input class="form-control" id="turma-nome" value="${t?.nome || ''}" placeholder="Ex: Turma A"></div>
     <div class="form-group"><label>Período</label><select class="form-control" id="turma-periodo">${opts}</select></div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveTurma(${id||0})">Salvar</button></div>`);
-}
-
-function saveTurma(id){
-  const serie=document.getElementById('turma-serie').value.trim();
-  const nome=document.getElementById('turma-nome').value.trim();
-  const periodo=document.getElementById('turma-periodo').value;
-  if(!serie||!nome){toast('Preencha todos os campos','error');return}
-  let list=DB.turmas;
-  if(id){const i=list.findIndex(x=>x.id===id);list[i]={...list[i],serie,nome,periodo}}
-  else list.push({id:DB.nextId(list),serie,nome,periodo});
-  DB.turmas=list;closeModal();toast('Turma salva!');renderTurmas();
-}
-
-function deleteTurma(id){
-  if(!confirm('Excluir esta turma?'))return;
-  DB.turmas=DB.turmas.filter(x=>x.id!==id);toast('Turma excluída!');renderTurmas();
-}
-
-/* ============================================================
-   VIEW: PROFESSORES (Teachers CRUD)
-   ============================================================ */
-function renderProfessores(){
-  const list=DB.professores,discs=DB.disciplinas;
-  let html=`<div class="card"><div class="card-header"><h3>Professores Cadastrados</h3>
-    <button class="btn btn-primary" onclick="editProfessor()">+ Novo Professor</button></div>`;
-  if(!list.length) html+=`<p style="color:var(--gray-500)">Nenhum professor cadastrado.</p>`;
-  else{
-    html+=`<table><thead><tr><th>ID</th><th>Nome</th><th>Disciplinas</th><th>Ações</th></tr></thead><tbody>`;
-    list.forEach(p=>{
-      const ds=(p.disciplinaIds||[]).map(did=>discs.find(d=>d.id===did)?.nome||'?').join(', ');
-      html+=`<tr><td>${p.id}</td><td>${p.nome}</td><td>${ds||'<em>Nenhuma</em>'}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="editProfessor(${p.id})">Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProfessor(${p.id})">Excluir</button></td></tr>`;
-    });
-    html+=`</tbody></table>`;
-  }
-  html+=`</div>`;document.getElementById('app').innerHTML=html;
-}
-
-function editProfessor(id){
-  const p=id?DB.professores.find(x=>x.id===id):null;
-  const discs=DB.disciplinas;
-  let checkboxes=discs.map(d=>`<label><input type="checkbox" value="${d.id}" ${(p?.disciplinaIds||[]).includes(d.id)?'checked':''}> ${d.nome}</label>`).join('');
-  openModal(`<h3>${p?'Editar':'Novo'} Professor</h3>
-    <div class="form-group"><label>Nome</label><input class="form-control" id="prof-nome" value="${p?.nome||''}"></div>
-    <div class="form-group"><label>Disciplinas</label><div class="checkbox-list" id="prof-discs">${checkboxes||'<p style="color:var(--gray-400)">Cadastre disciplinas primeiro.</p>'}</div></div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveProfessor(${id||0})">Salvar</button></div>`);
-}
-
-function saveProfessor(id){
-  const nome=document.getElementById('prof-nome').value.trim();
-  if(!nome){toast('Nome é obrigatório','error');return}
-  const disciplinaIds=[...document.querySelectorAll('#prof-discs input:checked')].map(c=>parseInt(c.value));
-  let list=DB.professores;
-  if(id){const i=list.findIndex(x=>x.id===id);list[i]={...list[i],nome,disciplinaIds}}
-  else{
-    // Init 5x9 availability grid (all available by default)
-    const disponibilidade=Array.from({length:5},()=>Array(9).fill(true));
-    list.push({id:DB.nextId(list),nome,disciplinaIds,disponibilidade});
-  }
-  DB.professores=list;closeModal();toast('Professor salvo!');renderProfessores();
-}
-
-function deleteProfessor(id){
-  if(!confirm('Excluir este professor?'))return;
-  DB.professores=DB.professores.filter(x=>x.id!==id);toast('Professor excluído!');renderProfessores();
-}
-
-/* ============================================================
-   VIEW: DISPONIBILIDADE (Availability Matrix)
-   ============================================================ */
-function renderDisponibilidade(){
-  const profs=DB.professores;
-  let html=`<div class="card"><div class="card-header"><h3>Matriz de Disponibilidade</h3></div>`;
-  if(!profs.length){html+=`<p style="color:var(--gray-500)">Cadastre professores primeiro.</p></div>`;document.getElementById('app').innerHTML=html;return}
-  html+=`<div class="form-group"><label>Selecione o Professor</label>
-    <select class="form-control" id="disp-prof" onchange="renderDispGrid()" style="max-width:300px">
-    ${profs.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('')}</select></div>
-    <div id="disp-grid-container"></div></div>`;
-  document.getElementById('app').innerHTML=html;
-  renderDispGrid();
-}
-
-function renderDispGrid(){
-  const profId=parseInt(document.getElementById('disp-prof').value);
-  const prof=DB.professores.find(p=>p.id===profId);
-  if(!prof)return;
-  if(!prof.disponibilidade) prof.disponibilidade=Array.from({length:5},()=>Array(9).fill(true));
-  let t=`<div style="overflow-x:auto"><table class="avail-grid"><tr><th>Horário</th>`;
-  DIAS.forEach(d=>t+=`<th>${d}</th>`);t+=`</tr>`;
-  for(let h=0;h<9;h++){
-    t+=`<tr><td class="slot-label" style="font-weight:600">${HORARIOS_LABEL[h]} Aula</td>`;
-    for(let d=0;d<5;d++){
-      const checked=prof.disponibilidade[d][h];
-      t+=`<td><input type="checkbox" ${checked?'checked':''} onchange="toggleDisp(${profId},${d},${h},this.checked)"></td>`;
+    <button class="btn btn-primary" onclick="saveTurma(${id || 0})">Salvar</button></div>`);
     }
-    t+=`</tr>`;
-  }
-  t+=`</table></div><p style="margin-top:12px;font-size:12px;color:var(--gray-500)">✅ Marcado = Disponível neste horário</p>`;
-  document.getElementById('disp-grid-container').innerHTML=t;
-}
+    function saveTurma(id) {
+      const serie = document.getElementById('turma-serie').value.trim(); const nome = document.getElementById('turma-nome').value.trim();
+      const periodo = document.getElementById('turma-periodo').value;
+      if (!serie || !nome) { toast('Preencha todos os campos', 'error'); return } let list = DB.turmas;
+      if (id) { const i = list.findIndex(x => x.id === id); list[i] = { ...list[i], serie, nome, periodo } }
+      else list.push({ id: DB.nextId(list), serie, nome, periodo });
+      DB.turmas = list; closeModal(); toast('Turma salva!'); renderTurmas();
+    }
+    function deleteTurma(id) { if (!confirm('Excluir esta turma?')) return; DB.turmas = DB.turmas.filter(x => x.id !== id); toast('Turma excluída!'); renderTurmas() }
 
-function toggleDisp(profId,dia,horario,val){
-  let list=DB.professores;
-  const prof=list.find(p=>p.id===profId);
-  if(!prof.disponibilidade) prof.disponibilidade=Array.from({length:5},()=>Array(9).fill(true));
-  prof.disponibilidade[dia][horario]=val;
-  DB.professores=list;
-}
+    /* ============================================================
+       VIEW: PROFESSORES
+       ============================================================ */
+    function renderProfessores() {
+      const list = DB.professores, discs = DB.disciplinas;
+      let html = `<div class="card"><div class="card-header"><h3>Professores Cadastrados</h3>
+    <button class="btn btn-primary" onclick="editProfessor()">+ Novo Professor</button></div>`;
+      if (!list.length) html += `<p style="color:var(--gray-500)">Nenhum professor cadastrado.</p>`;
+      else {
+        html += `<table><thead><tr><th>ID</th><th>Nome</th><th>Disciplinas</th><th>Ações</th></tr></thead><tbody>`;
+        list.forEach(p => {
+          const ds = (p.disciplinaIds || []).map(did => discs.find(d => d.id === did)?.nome || '?').join(', ');
+          html += `<tr><td>${p.id}</td><td>${p.nome}</td><td>${ds || '<em>Nenhuma</em>'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="editProfessor(${p.id})">Editar</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProfessor(${p.id})">Excluir</button></td></tr>`
+        });
+        html += `</tbody></table>`
+      }
+      html += `</div>`; document.getElementById('app').innerHTML = html;
+    }
+    function editProfessor(id) {
+      const p = id ? DB.professores.find(x => x.id === id) : null; const discs = DB.disciplinas;
+      let cb = discs.map(d => `<label><input type="checkbox" value="${d.id}" ${(p?.disciplinaIds || []).includes(d.id) ? 'checked' : ''}> ${d.nome}</label>`).join('');
+      openModal(`<h3>${p ? 'Editar' : 'Novo'} Professor</h3>
+    <div class="form-group"><label>Nome</label><input class="form-control" id="prof-nome" value="${p?.nome || ''}"></div>
+    <div class="form-group"><label>Disciplinas</label><div class="checkbox-list" id="prof-discs">${cb || '<p style="color:var(--gray-400)">Cadastre disciplinas primeiro.</p>'}</div></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveProfessor(${id || 0})">Salvar</button></div>`);
+    }
+    function saveProfessor(id) {
+      const nome = document.getElementById('prof-nome').value.trim(); if (!nome) { toast('Nome é obrigatório', 'error'); return }
+      const disciplinaIds = [...document.querySelectorAll('#prof-discs input:checked')].map(c => parseInt(c.value));
+      let list = DB.professores;
+      if (id) { const i = list.findIndex(x => x.id === id); list[i] = { ...list[i], nome, disciplinaIds } }
+      else { const disponibilidade = Array.from({ length: 5 }, () => Array(9).fill(true)); list.push({ id: DB.nextId(list), nome, disciplinaIds, disponibilidade }) }
+      DB.professores = list; closeModal(); toast('Professor salvo!'); renderProfessores();
+    }
+    function deleteProfessor(id) { if (!confirm('Excluir este professor?')) return; DB.professores = DB.professores.filter(x => x.id !== id); toast('Professor excluído!'); renderProfessores() }
 
-/* ============================================================
-   VIEW: GERAR GRADE (Schedule Generation)
-   ============================================================ */
-function renderGerar(){
-  const turmas=DB.turmas;
-  let html=`<div class="card"><div class="card-header"><h3>Gerar Grade de Horários</h3></div>
+    /* ============================================================
+       VIEW: DISPONIBILIDADE
+       ============================================================ */
+    function renderDisponibilidade() {
+      const profs = DB.professores;
+      let html = `<div class="card"><div class="card-header"><h3>Matriz de Disponibilidade</h3></div>`;
+      if (!profs.length) { html += `<p style="color:var(--gray-500)">Cadastre professores primeiro.</p></div>`; document.getElementById('app').innerHTML = html; return }
+      html += `<div class="form-group"><label>Selecione o Professor</label>
+    <select class="form-control" id="disp-prof" onchange="renderDispGrid()" style="max-width:300px">
+    ${profs.map(p => `<option value="${p.id}">${p.nome}</option>`).join('')}</select></div>
+    <div id="disp-grid-container"></div></div>`;
+      document.getElementById('app').innerHTML = html; renderDispGrid();
+    }
+    function renderDispGrid() {
+      const profId = parseInt(document.getElementById('disp-prof').value);
+      const prof = DB.professores.find(p => p.id === profId); if (!prof) return;
+      if (!prof.disponibilidade) prof.disponibilidade = Array.from({ length: 5 }, () => Array(9).fill(true));
+      let t = `<div style="overflow-x:auto"><table class="avail-grid"><tr><th>Horário</th>`;
+      DIAS.forEach(d => t += `<th>${d}</th>`); t += `</tr>`;
+      for (let h = 0; h < 9; h++) {
+        t += `<tr><td class="slot-label" style="font-weight:600">${HORARIOS_LABEL[h]} Aula</td>`;
+        for (let d = 0; d < 5; d++) { t += `<td><input type="checkbox" ${prof.disponibilidade[d][h] ? 'checked' : ''} onchange="toggleDisp(${profId},${d},${h},this.checked)"></td>` }
+        t += `</tr>`
+      }
+      t += `</table></div><p style="margin-top:12px;font-size:12px;color:var(--gray-500)">✅ Marcado = Disponível neste horário</p>`;
+      document.getElementById('disp-grid-container').innerHTML = t;
+    }
+    function toggleDisp(profId, dia, horario, val) {
+      let list = DB.professores; const prof = list.find(p => p.id === profId);
+      if (!prof.disponibilidade) prof.disponibilidade = Array.from({ length: 5 }, () => Array(9).fill(true));
+      prof.disponibilidade[dia][horario] = val; DB.professores = list;
+    }
+
+    /* ============================================================
+       VIEW: GERAR GRADE
+       ============================================================ */
+    function renderGerar() {
+      const turmas = DB.turmas;
+      let html = `<div class="card"><div class="card-header"><h3>Gerar Grade de Horários</h3></div>
     <p style="margin-bottom:16px;font-size:14px;color:var(--gray-600)">Selecione as turmas para gerar automaticamente a grade de horários utilizando algoritmo de backtracking.</p>
     <div class="form-group"><label>Turmas</label><div class="checkbox-list" id="gerar-turmas">
-    ${turmas.map(t=>`<label><input type="checkbox" value="${t.id}" checked> ${t.serie} - ${t.nome} (${PERIODOS[t.periodo].label})</label>`).join('')}
+    ${turmas.map(t => `<label><input type="checkbox" value="${t.id}" checked> ${t.serie} - ${t.nome} (${PERIODOS[t.periodo].label})</label>`).join('')}
     </div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-success" onclick="executarGeracao()">⚡ Gerar Grade</button>
-      <button class="btn btn-danger" onclick="limparGrades()">🗑 Limpar Todas as Grades</button>
-    </div>
-    <div id="gerar-result" style="margin-top:20px"></div>
-  </div>`;
-  document.getElementById('app').innerHTML=html;
-}
+      <button class="btn btn-danger" onclick="limparGrades()">🗑 Limpar Grades</button>
+    </div><div id="gerar-result" style="margin-top:20px"></div></div>`;
+      document.getElementById('app').innerHTML = html;
+    }
+    function limparGrades() { DB.grades = []; toast('Grades removidas!'); renderGerar() }
 
-function limparGrades(){ DB.grades=[];toast('Grades removidas!');renderGerar() }
+    /* ============================================================
+       SCHEDULE ENGINE – Backtracking
+       ============================================================ */
+    function executarGeracao() {
+      const selIds = [...document.querySelectorAll('#gerar-turmas input:checked')].map(c => parseInt(c.value));
+      if (!selIds.length) { toast('Selecione ao menos uma turma', 'error'); return }
+      const turmas = DB.turmas.filter(t => selIds.includes(t.id));
+      const professores = DB.professores; const disciplinas = DB.disciplinas;
+      let allGrades = DB.grades.filter(g => !selIds.includes(g.turmaId));
+      const resultDiv = document.getElementById('gerar-result'); let log = []; let successCount = 0;
+      const teacherSchedule = {};
+      professores.forEach(p => { teacherSchedule[p.id] = Array.from({ length: 5 }, () => Array(9).fill(null)) });
+      allGrades.forEach(g => { (g.slots || []).forEach(s => { if (teacherSchedule[s.professorId]) teacherSchedule[s.professorId][s.dia][s.horario] = g.turmaId }) });
 
-/* ============================================================
-   SCHEDULE ENGINE – Backtracking
-   ============================================================ */
-function executarGeracao(){
-  const selIds=[...document.querySelectorAll('#gerar-turmas input:checked')].map(c=>parseInt(c.value));
-  if(!selIds.length){toast('Selecione ao menos uma turma','error');return}
-  const turmas=DB.turmas.filter(t=>selIds.includes(t.id));
-  const professores=DB.professores;
-  const disciplinas=DB.disciplinas;
-  let allGrades=DB.grades.filter(g=>!selIds.includes(g.turmaId)); // keep non-selected
-  const resultDiv=document.getElementById('gerar-result');
-  let log=[];let successCount=0;
-
-  // Global teacher schedule to prevent conflicts across turmas
-  // teacherSchedule[profId][dia][horario] = turmaId or null
-  const teacherSchedule={};
-  professores.forEach(p=>{teacherSchedule[p.id]=Array.from({length:5},()=>Array(9).fill(null))});
-
-  // Fill from existing kept grades
-  allGrades.forEach(g=>{
-    (g.slots||[]).forEach(s=>{
-      if(teacherSchedule[s.professorId]) teacherSchedule[s.professorId][s.dia][s.horario]=g.turmaId;
-    });
-  });
-
-  for(const turma of turmas){
-    const numAulas=PERIODOS[turma.periodo].aulas;
-    // Build requirement list: each (disciplinaId, professorId) needs N slots
-    const requirements=[];
-    disciplinas.forEach(disc=>{
-      const profsForDisc=professores.filter(p=>(p.disciplinaIds||[]).includes(disc.id));
-      if(profsForDisc.length){
-        // pick first available professor for this discipline
-        profsForDisc.forEach(prof=>{
-          requirements.push({disciplinaId:disc.id,professorId:prof.id,needed:disc.cargaHoraria,discNome:disc.nome,profNome:prof.nome});
+      for (const turma of turmas) {
+        const numAulas = PERIODOS[turma.periodo].aulas; const requirements = [];
+        disciplinas.forEach(disc => {
+          const profsForDisc = professores.filter(p => (p.disciplinaIds || []).includes(disc.id));
+          profsForDisc.forEach(prof => { requirements.push({ disciplinaId: disc.id, professorId: prof.id, needed: disc.cargaHoraria, discNome: disc.nome, profNome: prof.nome }) });
         });
+        const seenDisc = new Set(); const finalReqs = [];
+        for (const r of requirements) { if (!seenDisc.has(r.disciplinaId)) { seenDisc.add(r.disciplinaId); finalReqs.push({ ...r }) } }
+        const slots = []; for (let d = 0; d < 5; d++)for (let h = 0; h < numAulas; h++)slots.push({ dia: d, horario: h });
+        const assigned = []; const remaining = finalReqs.map(r => ({ ...r }));
+
+        function canAssign(slot, req) {
+          const prof = professores.find(p => p.id === req.professorId); if (!prof) return false;
+          if (prof.disponibilidade && !prof.disponibilidade[slot.dia][slot.horario]) return false;
+          if (teacherSchedule[req.professorId][slot.dia][slot.horario]) return false;
+          if (assigned.find(a => a.dia === slot.dia && a.horario === slot.horario)) return false; return true;
+        }
+        function backtrack(si) {
+          if (si >= slots.length) return true; if (remaining.every(r => r.needed <= 0)) return true;
+          const slot = slots[si];
+          for (const req of remaining) {
+            if (req.needed <= 0) continue; if (!canAssign(slot, req)) continue;
+            assigned.push({ dia: slot.dia, horario: slot.horario, disciplinaId: req.disciplinaId, professorId: req.professorId });
+            teacherSchedule[req.professorId][slot.dia][slot.horario] = turma.id; req.needed--;
+            if (backtrack(si + 1)) return true;
+            assigned.pop(); teacherSchedule[req.professorId][slot.dia][slot.horario] = null; req.needed++
+          }
+          return backtrack(si + 1);
+        }
+        const success = backtrack(0); const allSatisfied = remaining.every(r => r.needed <= 0);
+        allGrades.push({ turmaId: turma.id, slots: [...assigned] });
+        if (success && allSatisfied) log.push(`✅ <strong>${turma.serie} - ${turma.nome}</strong>: Grade gerada! (${assigned.length} aulas)`);
+        else {
+          const unmet = remaining.filter(r => r.needed > 0).map(r => `${r.discNome} (faltam ${r.needed}h)`).join(', ');
+          log.push(`⚠️ <strong>${turma.serie} - ${turma.nome}</strong>: Parcial. Faltam: ${unmet}`)
+        }
+        successCount++;
       }
-    });
-
-    // Deduplicate: for each discipline, pick only ONE professor (the first one with availability)
-    const seenDisc=new Set();
-    const finalReqs=[];
-    for(const r of requirements){
-      if(!seenDisc.has(r.disciplinaId)){seenDisc.add(r.disciplinaId);finalReqs.push({...r})}
+      DB.grades = allGrades;
+      resultDiv.innerHTML = `<div class="card" style="background:${log.some(l => l.includes('⚠️')) ? 'var(--warning-bg)' : 'var(--success-bg)'}">
+    <h3 style="margin-bottom:12px">Resultado</h3>${log.map(l => `<p style="margin-bottom:8px;font-size:14px">${l}</p>`).join('')}
+    <p style="margin-top:12px;font-size:13px;color:var(--gray-600)">Vá ao <a href="#dashboard" style="color:var(--accent);font-weight:600">Dashboard</a> para visualizar.</p></div>`;
+      toast(`${successCount} grade(s) gerada(s)!`);
     }
 
-    // Build slots list for this turma
-    const slots=[];
-    for(let d=0;d<5;d++) for(let h=0;h<numAulas;h++) slots.push({dia:d,horario:h});
-
-    // Backtracking engine
-    const assigned=[]; // array of {dia,horario,disciplinaId,professorId}
-    const remaining=finalReqs.map(r=>({...r}));
-
-    function canAssign(slot,req){
-      const prof=professores.find(p=>p.id===req.professorId);
-      if(!prof) return false;
-      // Check availability
-      if(prof.disponibilidade && !prof.disponibilidade[slot.dia][slot.horario]) return false;
-      // Check teacher not in another turma at this time
-      if(teacherSchedule[req.professorId][slot.dia][slot.horario]) return false;
-      // Check not already assigned in this turma at this slot
-      if(assigned.find(a=>a.dia===slot.dia&&a.horario===slot.horario)) return false;
-      return true;
-    }
-
-    function backtrack(slotIdx){
-      if(slotIdx>=slots.length) return true; // all slots filled or skipped
-      // Check if all requirements satisfied
-      const allDone=remaining.every(r=>r.needed<=0);
-      if(allDone) return true;
-
-      const slot=slots[slotIdx];
-      // Try each requirement
-      for(const req of remaining){
-        if(req.needed<=0) continue;
-        if(!canAssign(slot,req)) continue;
-        // Assign
-        assigned.push({dia:slot.dia,horario:slot.horario,disciplinaId:req.disciplinaId,professorId:req.professorId});
-        teacherSchedule[req.professorId][slot.dia][slot.horario]=turma.id;
-        req.needed--;
-        if(backtrack(slotIdx+1)) return true;
-        // Undo
-        assigned.pop();
-        teacherSchedule[req.professorId][slot.dia][slot.horario]=null;
-        req.needed++;
-      }
-      // Try skipping this slot (leave empty)
-      return backtrack(slotIdx+1);
-    }
-
-    const success=backtrack(0);
-    const allSatisfied=remaining.every(r=>r.needed<=0);
-    if(success&&allSatisfied){
-      allGrades.push({turmaId:turma.id,slots:[...assigned]});
-      log.push(`✅ <strong>${turma.serie} - ${turma.nome}</strong>: Grade gerada com sucesso! (${assigned.length} aulas alocadas)`);
-      successCount++;
-    } else {
-      // Partial result
-      allGrades.push({turmaId:turma.id,slots:[...assigned]});
-      const unmet=remaining.filter(r=>r.needed>0).map(r=>`${r.discNome} (faltam ${r.needed}h)`).join(', ');
-      log.push(`⚠️ <strong>${turma.serie} - ${turma.nome}</strong>: Grade parcial. Não atendidos: ${unmet}`);
-      successCount++;
-    }
-  }
-
-  DB.grades=allGrades;
-  resultDiv.innerHTML=`<div class="card" style="background:${log.some(l=>l.includes('⚠️'))?'var(--warning-bg)':'var(--success-bg)'}">
-    <h3 style="margin-bottom:12px">Resultado da Geração</h3>
-    ${log.map(l=>`<p style="margin-bottom:8px;font-size:14px">${l}</p>`).join('')}
-    <p style="margin-top:12px;font-size:13px;color:var(--gray-600)">Vá ao <a href="#dashboard" style="color:var(--accent);font-weight:600">Dashboard</a> para visualizar as grades geradas.</p>
-  </div>`;
-  toast(`${successCount} grade(s) gerada(s)!`);
-}
-
-/* ============================================================
-   INIT
-   ============================================================ */
-navigate(location.hash.slice(1)||'dashboard');
-</script>
+    /* ============================================================
+       INIT – Check session on load
+       ============================================================ */
+    if (getSession()) initApp();
+    else renderLanding();
+  </script>
 </body>
+
 </html>
