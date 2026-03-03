@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>2.0</title>
+  <title>Gestão de Horários Escolares</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -972,7 +972,7 @@
     function clearSession() { sessionStorage.removeItem('hs_session') }
 
     /* Root super admin credentials */
-    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: '@Lei30242728' } } catch { return { user: 'root', pass: '@Lei30242728' } } }
+    function getRootCreds() { try { return JSON.parse(localStorage.getItem('hs_root')) || { user: 'root', pass: 'root123' } } catch { return { user: 'root', pass: 'root123' } } }
     function setRootCreds(v) { localStorage.setItem('hs_root', JSON.stringify(v)) }
     function nextId(list) { return list.length ? Math.max(...list.map(i => i.id)) + 1 : 1 }
 
@@ -1604,24 +1604,15 @@
         const arrayBuf = await file.arrayBuffer();
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
+        let allItems = [];
+        for (let pg = 1; pg <= pdf.numPages; pg++) {
+          const page = await pdf.getPage(pg);
           const tc = await page.getTextContent();
-          const items = tc.items;
-          const lines = {};
-          items.forEach(it => {
-            const y = Math.round(it.transform[5]);
-            if (!lines[y]) lines[y] = [];
-            lines[y].push({ x: it.transform[4], text: it.str });
-          });
-          const sortedYs = Object.keys(lines).map(Number).sort((a, b) => b - a);
-          sortedYs.forEach(y => {
-            const ln = lines[y].sort((a, b) => a.x - b.x).map(i => i.text).join('\t');
-            fullText += ln + '\n';
+          tc.items.forEach(it => {
+            if (it.str.trim()) allItems.push({ x: Math.round(it.transform[4]), y: Math.round(it.transform[5]), text: it.str.trim(), page: pg });
           });
         }
-        const parsed = parsePDFSchedule(fullText);
+        const parsed = parsePDFItems(allItems);
         const analysis = analyzePDFData(parsed);
         showPDFPreview(parsed, analysis);
       } catch (e) {
@@ -1630,36 +1621,104 @@
       }
     }
 
-    function parsePDFSchedule(text) {
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-      const result = [];
-      let current = null;
-      const cfg = getSchoolConfig();
-      const horLabels = cfg.horarios || ['07:30', '08:20', '09:10', '10:20', '11:10', '11:55'];
+    function groupYRows(items, tolerance) {
+      /* Group items into rows by Y with tolerance (items within ±tolerance are same row) */
+      const sorted = [...items].sort((a, b) => b.y - a.y);
+      const rows = [];
+      let currentRow = null;
+      sorted.forEach(item => {
+        if (!currentRow || Math.abs(item.y - currentRow.y) > tolerance) {
+          currentRow = { y: item.y, items: [] };
+          rows.push(currentRow);
+        }
+        currentRow.items.push(item);
+      });
+      rows.forEach(r => r.items.sort((a, b) => a.x - b.x));
+      return rows;
+    }
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (/\bhor\b/i.test(line) && /\bseg\b/i.test(line) && /\bsex\b/i.test(line)) {
-          if (i > 0 && !lines[i - 1].match(/^\d/)) {
-            const name = lines[i - 1].replace(/\t/g, ' ').trim();
-            if (name.length > 1 && name.length < 60) {
-              current = { nome: name, slots: [] };
+    function findNearestCol(x, colXs) {
+      let best = 0, bestDist = Infinity;
+      colXs.forEach((cx, i) => { const d = Math.abs(x - cx); if (d < bestDist) { bestDist = d; best = i; } });
+      return best;
+    }
+
+    function parsePDFItems(allItems) {
+      const result = [];
+      const rows = groupYRows(allItems, 4);
+
+      let current = null;
+      let colXs = null; /* X positions for [Hor, Seg, Ter, Qua, Qui, Sex] */
+      let horCounter = 0; /* Sequential index for each time row per professor */
+
+      for (let ri = 0; ri < rows.length; ri++) {
+        const row = rows[ri];
+        const rowText = row.items.map(it => it.text).join(' ');
+
+        /* Detect header row: Hor Seg Ter Qua Qui Sex */
+        if (/\bhor\b/i.test(rowText) && /\bseg\b/i.test(rowText) && /\bsex\b/i.test(rowText)) {
+          /* Extract column X positions from header items */
+          const dayWords = ['hor', 'seg', 'ter', 'qua', 'qui', 'sex'];
+          colXs = [];
+          dayWords.forEach(dw => {
+            const found = row.items.find(it => it.text.toLowerCase().startsWith(dw));
+            if (found) colXs.push(found.x);
+          });
+          if (colXs.length < 6) colXs = null; /* Incomplete header, skip */
+
+          /* The line above the header is the professor name */
+          if (ri > 0) {
+            const prevRow = rows[ri - 1];
+            const name = prevRow.items.map(it => it.text).join(' ').trim();
+            if (name.length > 1 && name.length < 80 && !name.match(/^\d{1,2}:\d{2}/)) {
+              current = { nome: name, slots: [], horLabels: [] };
               result.push(current);
+              horCounter = 0;
             }
           }
           continue;
         }
-        if (!current) continue;
-        const parts = line.split('\t');
-        const firstPart = parts[0]?.trim();
-        if (!firstPart || !firstPart.match(/^\d{1,2}:\d{2}$/)) continue;
-        const horIdx = horLabels.indexOf(firstPart);
-        if (horIdx < 0) continue;
-        for (let d = 1; d <= 5 && d < parts.length; d++) {
-          const cell = parts[d]?.trim();
-          if (!cell || cell.match(/^-+$/)) continue;
+
+        if (!current || !colXs) continue;
+
+        /* Check if this row starts with a time (horario) */
+        const firstItem = row.items[0];
+        if (!firstItem || !firstItem.text.match(/^\d{1,2}:\d{2}$/)) continue;
+
+        const horIdx = horCounter++;
+        current.horLabels[horIdx] = firstItem.text;
+
+        /* Assign remaining items to columns based on X position */
+        const cells = ['', '', '', '', '']; /* Seg, Ter, Qua, Qui, Sex */
+        row.items.slice(1).forEach(it => {
+          const col = findNearestCol(it.x, colXs);
+          if (col >= 1 && col <= 5) { /* col 0 = Hor, 1-5 = days */
+            cells[col - 1] = (cells[col - 1] ? cells[col - 1] + ' ' : '') + it.text;
+          }
+        });
+
+        /* Also check items that might be on a slightly different Y but same "visual row"
+           look at the next row if it's very close in Y and doesn't start with a time */
+        if (ri + 1 < rows.length) {
+          const nextRow = rows[ri + 1];
+          const yDiff = Math.abs(row.y - nextRow.y);
+          const nextFirst = nextRow.items[0]?.text || '';
+          if (yDiff < 12 && !nextFirst.match(/^\d{1,2}:\d{2}$/) && !(/\bhor\b/i.test(nextFirst))) {
+            nextRow.items.forEach(it => {
+              const col = findNearestCol(it.x, colXs);
+              if (col >= 1 && col <= 5) {
+                cells[col - 1] = (cells[col - 1] ? cells[col - 1] + ' ' : '') + it.text;
+              }
+            });
+            ri++; /* Skip the merged row */
+          }
+        }
+
+        for (let d = 0; d < 5; d++) {
+          const cell = cells[d].trim();
+          if (!cell || cell.match(/^[-–]+$/)) continue;
           const discName = extractDisciplineName(cell);
-          current.slots.push({ dia: d - 1, horario: horIdx, texto: cell, disciplina: discName });
+          current.slots.push({ dia: d, horario: horIdx, texto: cell, disciplina: discName });
         }
       }
       return result;
@@ -1722,7 +1781,7 @@
         html += `<div style="margin-bottom:12px"><strong>${esc(p.nome)}</strong> — ${p.slots.length} aula(s) — <em style="color:var(--gray-500)">${discList}</em>`;
         html += `<div class="import-preview"><table><thead><tr><th>Dia</th><th>Horário</th><th>Disciplina</th><th>Texto</th></tr></thead><tbody>`;
         p.slots.forEach(s => {
-          html += `<tr><td>${DIAS[s.dia]}</td><td>${cfg.horarios[s.horario] || HORARIOS_LABEL[s.horario]}</td><td><strong>${esc(s.disciplina || '?')}</strong></td><td style="font-size:11px;color:var(--gray-500)">${esc(s.texto)}</td></tr>`;
+          html += `<tr><td>${DIAS[s.dia]}</td><td>${(p.horLabels && p.horLabels[s.horario]) || HORARIOS_LABEL[s.horario] || ''}</td><td><strong>${esc(s.disciplina || '?')}</strong></td><td style="font-size:11px;color:var(--gray-500)">${esc(s.texto)}</td></tr>`;
         });
         html += `</tbody></table></div></div>`;
       });
@@ -1961,7 +2020,7 @@
       <button class="btn btn-outline" onclick="renderLanding()">← Voltar</button>
       <button class="btn btn-primary" onclick="doRootLogin()">Entrar como Root</button>
     </div>
-    <p style="font-size:11px;color:var(--gray-400);margin-top:12px"> </p>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:12px">Credenciais padrão: root / root123</p>
     </div></div>`;
     }
 
