@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Gestão de Horários Escolares</title>
+  <title>2.2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1738,18 +1738,21 @@
         const horIdx = horCounter++;
         current.horLabels[horIdx] = timeMatch[1];
 
-        /* Assign remaining items to columns based on X position */
+        /* Assign remaining items to day columns based on X position.
+           Compare only against Seg/Ter/Qua/Qui/Sex (indices 1-5), never Hor,
+           so items between Hor and Seg always map to Seg. */
         const cells = ['', '', '', '', ''];
+        const dayColXs = colXs.slice(1); /* [Seg_x, Ter_x, Qua_x, Qui_x, Sex_x] */
         row.items.forEach(it => {
           if (it === firstItem) return; /* Skip the time item */
           /* Skip dash-only items */
           if (it.text.match(/^[-–]+$/)) return;
           /* Skip time+dash items like "07:30 ---..." */
           if (it.text.match(/^\d{1,2}:\d{2}\s+[-–]+$/)) return;
-          const col = findNearestCol(it.x, colXs);
-          if (col >= 1 && col <= 5) {
-            cells[col - 1] = (cells[col - 1] ? cells[col - 1] + ' ' : '') + it.text;
-          }
+          /* Skip items clearly in the Hor column (time area) */
+          if (it.x < colXs[0] + 10) return;
+          const dayCol = findNearestCol(it.x, dayColXs); /* Returns 0-4 for Seg-Sex */
+          cells[dayCol] = (cells[dayCol] ? cells[dayCol] + ' ' : '') + it.text;
         });
 
         for (let d = 0; d < 5; d++) {
