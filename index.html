@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WorkHub — Dashboard de Trabalho</title>
+    <meta name="description"
+        content="Dashboard de trabalho diário com Google Workspace: Agenda, Gmail, Tarefas, Keep e upload de horários semanais." />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google API Client -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <!-- PDF.js UMD build (global window.pdfjsLib — no module isolation issues) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configure PDF.js worker after it loads
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+    <!-- Tesseract.js — OCR for images client-side -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════════════════
+     SCHEDULE UPLOAD MODAL
+     ═══════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="schedule-modal" role="dialog" aria-modal="true" aria-label="Importar Horários">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span style="font-size:20px">📅</span>
+                <h2>Importar <span>Horários</span></h2>
+                <button class="btn-modal-close" id="btn-modal-close" aria-label="Fechar">✕</button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Drop Zone -->
+                <div class="drop-zone" id="drop-zone" role="button" tabindex="0"
+                    aria-label="Clique ou arraste um arquivo">
+                    <div class="drop-zone-icon" id="drop-zone-icon">📂</div>
+                    <div class="drop-zone-text">Arraste um arquivo aqui</div>
+                    <div class="drop-zone-sub">CSV · TXT · <strong>PDF · PNG · JPG · WEBP</strong></div>
+                    <input type="file" id="file-input" accept=".csv,.txt,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tiff"
+                        style="display:none" />
+                </div>
+
+                <div class="modal-sep">ou cole os dados abaixo</div>
+
+                <!-- Paste Area -->
+                <textarea class="paste-area" id="paste-area" rows="5"
+                    placeholder="Cole aqui o conteúdo do CSV ou tabela de horários&#10;&#10;Exemplo CSV:&#10;Dia;Início;Fim;Matéria;Local&#10;Segunda;08:00;09:00;Matemática;Sala 1&#10;Segunda;09:00;10:00;Português;Sala 2&#10;Terça;08:00;09:30;Física;Lab"></textarea>
+                <button class="btn-parse" id="btn-parse">🔍 Processar Dados</button>
+
+                <!-- Preview -->
+                <div id="schedule-preview-container" style="min-height:40px"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-footer-left">
+                    <strong id="schedule-count">0</strong> evento(s) reconhecido(s) · Serão agendados <strong>toda
+                        semana</strong> no Google Calendar
+                </div>
+                <button class="btn-schedule-all" id="btn-schedule-all" disabled>
+                    📅 Agendar Semanalmente
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+     MAIN DASHBOARD
+     ═══════════════════════════════════════════════════ -->
+    <div class="app-wrapper">
+
+        <!-- ───────────────────────────────────
+       LEFT COLUMN
+       ─────────────────────────────────── -->
+        <aside class="left-col">
+
+            <!-- Digital Clock + Auth -->
+            <div class="glass-card clock-card">
+                <div class="clock-display">
+                    <div class="clock-time" id="clock-time">00<span class="clock-colon">:</span>00</div>
+                    <div class="clock-seconds" id="clock-seconds">00s</div>
+                    <div class="clock-date" id="clock-date">Carregando...</div>
+                </div>
+                <div class="auth-section" id="auth-section"></div>
+            </div>
+
+            <!-- Google Tasks -->
+            <div class="glass-card tasks-card">
+                <div class="card-header">
+                    <div class="icon icon-green">✓</div>
+                    <h3>Tarefas do Dia</h3>
+                </div>
+                <div class="card-body" style="padding:6px">
+                    <div id="task-list"></div>
+                </div>
+            </div>
+
+            <!-- Google Keep -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="icon icon-amber">📌</div>
+                    <h3>Google Keep</h3>
+                </div>
+                <div class="card-body">
+                    <div id="notes-grid"></div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- ───────────────────────────────────
+       CENTER — Top Bar + Agenda
+       ─────────────────────────────────── -->
+        <main class="center-col">
+
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <div class="app-logo">WORK<span>HUB</span></div>
+                    <span class="demo-badge" id="demo-badge">● Demo</span>
+                </div>
+                <div class="top-bar-right" id="top-bar-right">
+                    <button class="btn-upload-schedule" id="btn-open-schedule" onclick="ScheduleModal.open()">
+                        📅 Importar Horário
+                    </button>
+                    <div class="today-label" id="today-label"></div>
+                    <button class="nav-btn" onclick="changeDay(-1)" data-tip="Dia anterior"
+                        aria-label="Anterior">‹</button>
+                    <button class="nav-btn" onclick="changeDay(0)" data-tip="Hoje" aria-label="Hoje">●</button>
+                    <button class="nav-btn" onclick="changeDay(1)" data-tip="Próximo dia"
+                        aria-label="Próximo">›</button>
+                </div>
+            </div>
+
+            <!-- Agenda by Shifts -->
+            <div class="agenda-scroll">
+
+                <!-- MANHÃ -->
+                <div class="shift-block">
+                    <div class="shift-header">
+                        <div class="shift-dot" style="background:#f5c400;box-shadow:0 0 8px #f5c400"></div>
+                        <span class="shift-label" style="color:#f5c400">🌅 Manhã</span>
+                        <span class="shift-time-range">06:00 – 12:00</span>
+                    </div>
+                    <div id="time-marker-morning" class="current-time-line" style="display:none;margin:0 8px 4px">
+                        <div class="time-dot"></div>
+                        <div class="time-line"></div>
+                        <div class="time-now-label"></div>
+                    </div>
+                    <div class="shift-events" id="events-morning"></div>
+                </div>
+
+                <!-- TARDE -->
+                <div class="shift-block">
+                    <div class="shift-header">
+                        <div class="shift-dot" style="background:#60a5fa;box-shadow:0 0 8px #60a5fa"></div>
+                        <span class="shift-label" style="color:#60a5fa">☀️ Tarde</span>
+                        <span class="shift-time-range">12:00 – 18:00</span>
+                    </div>
+                    <div id="time-marker-afternoon" class="current-time-line" style="display:none;margin:0 8px 4px">
+                        <div class="time-dot"></div>
+                        <div class="time-line"></div>
+                        <div class="time-now-label"></div>
+                    </div>
+                    <div class="shift-events" id="events-afternoon"></div>
+                </div>
+
+                <!-- NOITE -->
+                <div class="shift-block">
+                    <div class="shift-header">
+                        <div class="shift-dot" style="background:#a3e635;box-shadow:0 0 8px #a3e635"></div>
+                        <span class="shift-label" style="color:#a3e635">🌙 Noite</span>
+                        <span class="shift-time-range">18:00 – 24:00</span>
+                    </div>
+                    <div id="time-marker-night" class="current-time-line" style="display:none;margin:0 8px 4px">
+                        <div class="time-dot"></div>
+                        <div class="time-line"></div>
+                        <div class="time-now-label"></div>
+                    </div>
+                    <div class="shift-events" id="events-night"></div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ───────────────────────────────────
+       RIGHT COLUMN — To-Do + Gmail
+       ─────────────────────────────────── -->
+        <aside class="right-col">
+
+            <!-- To-Do List -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="icon icon-gold">📝</div>
+                    <h3>To-Do List</h3>
+                </div>
+                <div class="todo-input-row">
+                    <div class="todo-input-main">
+                        <input class="todo-input" id="todo-input" type="text" placeholder="Novo afazer... (Enter)"
+                            maxlength="120" aria-label="Novo afazer" />
+                        <button class="btn-add-todo" onclick="addTodo()" aria-label="Adicionar">+</button>
+                    </div>
+                    <div class="todo-meta-row">
+                        <input class="todo-date" id="todo-date" type="date" aria-label="Data" />
+                        <input class="todo-time" id="todo-time" type="time" aria-label="Hora" />
+                    </div>
+                </div>
+                <div class="todo-list" id="todo-list"></div>
+            </div>
+
+            <!-- Gmail -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="icon icon-red">✉️</div>
+                    <h3>Gmail</h3>
+                    <div class="gmail-count" id="gmail-badge" style="display:none">0</div>
+                </div>
+                <div class="card-body" style="padding:6px">
+                    <div id="email-list"></div>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts (order matters: config → drive → schedule → app) -->
+    <script src="config.js"></script>
+    <script src="drive.js"></script>
+    <script src="schedule.js"></script>
+    <script src="app.js"></script>
+
+</body>
+
+</html>
